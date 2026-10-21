@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>EVEDIS // TABLET EXTENDED MONITOR</title>
+  <link rel="stylesheet" href="css/retro-lcd.css">
+  <link rel="stylesheet" href="css/client.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body class="fullscreen-mode">
+
+  <!-- Connect / PIN Entry Screen (Shown if not paired) -->
+  <div id="pairingScreen" class="pairing-container">
+    <div class="pairing-card">
+      <div class="brand">
+        <h1>EVEDIS</h1>
+        <p>Wireless Secondary Display System</p>
+      </div>
+
+      <div class="pin-box">
+        <div id="clientAuthStatus" style="font-size: 12px; color: #58a6ff; margin-bottom: 8px; display: none;"></div>
+        <label for="pinInput">Enter 6-Digit Host PIN</label>
+        <div class="pin-inputs" id="pinDigitsContainer">
+          <input type="text" maxlength="6" id="pinInput" placeholder="000000" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+        </div>
+        <button id="btnConnect" class="btn-connect">Connect to Host</button>
+      </div>
+      <div id="pairingError" class="pairing-error"></div>
+    </div>
+  </div>
+
+  <!-- Immersive Display Area -->
+  <div id="displayContainer" class="display-container" style="display: none;">
+    <!-- Zoomable Video Stage -->
+    <div id="videoStage" class="video-stage">
+      <video id="remoteVideo" autoplay playsinline muted></video>
+    </div>
+
+    <!-- Tap to Enter Fullscreen Prompt (Mandatory Android Gesture) -->
+    <div id="fullscreenPrompt" class="fullscreen-prompt">
+      <div class="prompt-card">
+        <span class="prompt-icon">⛶</span>
+        <h2>Tap to Enter Full Screen</h2>
+        <p>Locks screen awake &amp; hides Android system navigation bar</p>
+      </div>
+    </div>
+
+    <!-- Floating HUD Controls (fades out after 3.5s, reappears on screen tap) -->
+    <div id="floatingHUD" class="floating-hud">
+      <div class="hud-pill" id="hudStatusPill">
+        <span class="hud-status-dot"></span>
+        <span id="hudStatus">1080p 60fps</span>
+      </div>
+      <div class="hud-actions">
+        <button id="btnLaptopMatch" class="hud-btn hud-btn-accent" title="Auto-readjust display to match physical laptop text size">
+          🖥️ Laptop Match
+        </button>
+        <button id="btnOpenScaleDrawer" class="hud-btn" title="Adjust display zoom & text size">
+          🔍 Scale: <span id="currentScaleText">100%</span>
+        </button>
+        <button id="btnOpenQualityDrawer" class="hud-btn" title="Change streaming quality / FPS">
+          ⚡ Quality
+        </button>
+        <button id="btnToggleFullscreen" class="hud-btn" title="Toggle Fullscreen">⛶ Fullscreen</button>
+        <button id="btnDisconnect" class="hud-btn hud-btn-danger" title="Disconnect">✕</button>
+      </div>
+    </div>
+
+    <!-- Scale & Text Readjustment Bottom Drawer -->
+    <div id="scaleDrawer" class="hud-drawer">
+      <div class="drawer-header">
+        <div>
+          <h3>Display Scale &amp; Text Readjustment</h3>
+          <p class="drawer-subtitle">Adjusts window &amp; font sizes so it feels like a real laptop screen</p>
+        </div>
+        <button id="btnCloseScaleDrawer" class="drawer-close-btn">✕</button>
+      </div>
+      
+      <div class="drawer-content">
+        <!-- Scale Preset Buttons -->
+        <div class="scale-presets-grid">
+          <button class="scale-preset-btn" data-scale="auto">
+            <span class="preset-name">🖥️ Laptop Match</span>
+            <span class="preset-desc">Auto-calibrated for comfortable text</span>
+          </button>
+          <button class="scale-preset-btn" data-scale="0.85">
+            <span class="preset-name">0.85x Compact</span>
+            <span class="preset-desc">Maximum desktop space</span>
+          </button>
+          <button class="scale-preset-btn active" data-scale="1.0">
+            <span class="preset-name">1.0x Full View</span>
+            <span class="preset-desc">Fit entire screen</span>
+          </button>
+          <button class="scale-preset-btn" data-scale="1.25">
+            <span class="preset-name">1.25x Large Text</span>
+            <span class="preset-desc">Recommended for 10" tablets</span>
+          </button>
+          <button class="scale-preset-btn" data-scale="1.5">
+            <span class="preset-name">1.5x Ultra Read</span>
+            <span class="preset-desc">For small 7-8" tablets</span>
+          </button>
+        </div>
+
+        <!-- Fine Tuning Slider -->
+        <div class="slider-row">
+          <label>Fine Scale: <span id="sliderValueText">100%</span></label>
+          <div class="slider-control">
+            <button id="btnScaleMinus" class="slider-step-btn">−</button>
+            <input type="range" id="scaleSlider" min="70" max="180" step="5" value="100" />
+            <button id="btnScalePlus" class="slider-step-btn">+</button>
+          </div>
+        </div>
+
+        <div class="drawer-tip">
+          💡 You can also use <strong>two-finger pinch to zoom</strong> and <strong>drag to pan</strong> anywhere on the screen!
+        </div>
+      </div>
+    </div>
+
+    <!-- Wi-Fi Streaming Quality Drawer -->
+    <div id="qualityDrawer" class="hud-drawer">
+      <div class="drawer-header">
+        <div>
+          <h3>Wi-Fi Stream Quality &amp; FPS</h3>
+          <p class="drawer-subtitle">Change video resolution &amp; framerate for your network</p>
+        </div>
+        <button id="btnCloseQualityDrawer" class="drawer-close-btn">✕</button>
+      </div>
+
+      <div class="drawer-content">
+        <div class="quality-presets-grid">
+          <button class="tab-quality-btn active" data-res="1080p" data-fps="60" data-bitrate="6000">
+            <span class="q-title">1080p @ 60 FPS</span>
+            <span class="q-desc">Ultra Sharp &amp; Smooth (Fast 5GHz Wi-Fi)</span>
+          </button>
+          <button class="tab-quality-btn" data-res="720p" data-fps="30" data-bitrate="2500">
+            <span class="q-title">720p @ 30 FPS</span>
+            <span class="q-desc">Balanced &amp; Stable (Normal Wi-Fi)</span>
+          </button>
+          <button class="tab-quality-btn" data-res="480p" data-fps="30" data-bitrate="1200">
+            <span class="q-title">480p @ 30 FPS</span>
+            <span class="q-desc">Data Saver &amp; Low Latency (Weak Wi-Fi)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/socket.io.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    (function() {
+      const authStatus = document.getElementById('clientAuthStatus');
+      const savedDevUser = localStorage.getItem('evedis_dev_user');
+      if (savedDevUser && authStatus) {
+        try {
+          const u = JSON.parse(savedDevUser);
+          authStatus.style.display = 'block';
+          authStatus.textContent = 'Active Session: ' + u.email;
+        } catch(e) {}
+      } else if (typeof firebase !== 'undefined' && firebase.auth && window.__IS_FIREBASE_CONFIGURED__) {
+        firebase.auth().onAuthStateChanged(user => {
+          if (user && authStatus) {
+            authStatus.style.display = 'block';
+            authStatus.textContent = 'Signed in as ' + user.email;
+          }
+        });
+      }
+    })();
+  </script>
+  <script src="js/client.js"></script>
+</body>
+</html>

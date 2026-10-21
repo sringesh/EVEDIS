@@ -1,0 +1,548 @@
+/* ===============================================================
+   EVEDIS TABLET VIEWER // RETRO LCD THEME
+   Nokia 3310 & CyberKongz Pixel Aesthetics with PURE UNALTERED VIDEO
+   =============================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap');
+
+:root {
+  --lcd-bg: #070a08;
+  --lcd-bg-surface: #0e1410;
+  --lcd-bg-drawer: rgba(14, 20, 16, 0.94);
+  --lcd-border: rgba(163, 255, 18, 0.35);
+  --lcd-border-bright: #a3ff12;
+  
+  --lcd-green: #a3ff12;
+  --lcd-green-glow: rgba(163, 255, 18, 0.45);
+  --lcd-green-dim: rgba(163, 255, 18, 0.12);
+  --lcd-green-faint: rgba(163, 255, 18, 0.05);
+  
+  --lcd-amber: #ffb800;
+  --lcd-amber-dim: rgba(255, 184, 0, 0.15);
+  --lcd-red: #ff3344;
+  
+  --lcd-text: #ecfae8;
+  --lcd-text-muted: #849c7f;
+  --lcd-grid: rgba(163, 255, 18, 0.06);
+
+  --font-pixel: 'Silkscreen', cursive;
+  --font-mono: 'Space Mono', monospace;
+  --font-term: 'VT323', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000; /* Pure black screen backdrop */
+  color: var(--lcd-text);
+  font-family: var(--font-mono);
+  touch-action: none;
+}
+
+/* ===============================================================
+   PAIRING / PIN ENTRY SCREEN (NOKIA 3310 & GAME BOY MATRIX CHASSIS)
+   =============================================================== */
+.pairing-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--lcd-bg);
+  background-image: 
+    linear-gradient(var(--lcd-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lcd-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  padding: 20px;
+}
+
+.pairing-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--lcd-bg-surface);
+  border: 2px solid var(--lcd-border);
+  padding: 32px 28px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 20px rgba(163, 255, 18, 0.1);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+}
+
+.pairing-card::before,
+.pairing-card::after {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--lcd-green);
+  line-height: 1;
+}
+
+.pairing-card::before { top: -6px; left: -4px; }
+.pairing-card::after { bottom: -6px; right: -4px; }
+
+.brand-icon {
+  font-size: 44px;
+  filter: drop-shadow(0 0 10px var(--lcd-green-glow));
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.brand h1 {
+  font-family: var(--font-pixel);
+  font-size: 24px;
+  color: var(--lcd-green);
+  text-shadow: 0 0 12px var(--lcd-green-glow);
+  letter-spacing: 2px;
+}
+
+.brand p {
+  font-family: var(--font-term);
+  color: var(--lcd-text-muted);
+  font-size: 18px;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.pin-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pin-box label {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--lcd-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#pinInput {
+  width: 100%;
+  font-family: var(--font-pixel);
+  font-size: 32px;
+  letter-spacing: 8px;
+  text-align: center;
+  background: #000;
+  border: 2px solid var(--lcd-border);
+  color: var(--lcd-green);
+  text-shadow: 0 0 12px var(--lcd-green-glow);
+  padding: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#pinInput:focus {
+  border-color: var(--lcd-green);
+  box-shadow: 0 0 16px var(--lcd-green-glow);
+}
+
+.btn-connect {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  background: var(--lcd-green-dim);
+  border: 1px solid var(--lcd-green);
+  color: var(--lcd-green);
+  padding: 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.15s ease;
+}
+
+.btn-connect:hover {
+  background: var(--lcd-green);
+  color: #000;
+  box-shadow: 0 0 20px var(--lcd-green-glow);
+}
+
+.pairing-error {
+  font-size: 12px;
+  color: var(--lcd-red);
+  min-height: 18px;
+}
+
+/* ===============================================================
+   IMMERSIVE DISPLAY AREA & PURE UNALTERED VIDEO STREAM
+   =============================================================== */
+.display-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Zoomable Stage */
+.video-stage {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.15s ease-out;
+  will-change: transform;
+}
+
+/* PURE, REAL 1:1 MAC STREAM (NO FILTERS / NO SCANLINES / NO TINT) */
+#remoteVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  background: #000;
+}
+
+/* Fullscreen Prompt Overlay */
+.fullscreen-prompt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+}
+
+.prompt-card {
+  background: var(--lcd-bg-surface);
+  border: 2px solid var(--lcd-green);
+  padding: 36px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 400px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.8), 0 0 25px rgba(163, 255, 18, 0.2);
+}
+
+.prompt-icon {
+  font-size: 40px;
+  color: var(--lcd-green);
+}
+
+.prompt-card h2 {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  color: var(--lcd-green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.prompt-card p {
+  color: var(--lcd-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ===============================================================
+   FLOATING HUD CONTROLS (RETRO CYBERDECK PILL)
+   =============================================================== */
+.floating-hud {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 20, 16, 0.92);
+  border: 1px solid var(--lcd-border);
+  backdrop-filter: blur(12px);
+  padding: 6px 14px;
+  border-radius: 4px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 15px rgba(163, 255, 18, 0.1);
+}
+
+.floating-hud.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hud-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--lcd-green);
+  padding-right: 8px;
+  border-right: 1px solid var(--lcd-border);
+}
+
+.hud-status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--lcd-green);
+  box-shadow: 0 0 6px var(--lcd-green);
+  animation: blink 1.2s step-start infinite;
+}
+
+.hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-btn {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  background: var(--lcd-green-dim);
+  border: 1px solid var(--lcd-border);
+  color: var(--lcd-text);
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.hud-btn:hover {
+  background: var(--lcd-green);
+  color: #000;
+  border-color: var(--lcd-green);
+}
+
+.hud-btn-accent {
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+  background: rgba(163, 255, 18, 0.2);
+}
+
+.hud-btn-danger {
+  border-color: var(--lcd-red);
+  color: var(--lcd-red);
+  background: rgba(255, 51, 68, 0.15);
+}
+
+/* ===============================================================
+   BOTTOM DRAWERS (RETRO LCD TELEMETRY PANELS)
+   =============================================================== */
+.hud-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--lcd-bg-drawer);
+  border-top: 2px solid var(--lcd-green);
+  backdrop-filter: blur(16px);
+  padding: 24px 28px 32px;
+  z-index: 80;
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.9);
+}
+
+.hud-drawer.open {
+  transform: translateY(0);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--lcd-border);
+  padding-bottom: 12px;
+}
+
+.drawer-header h3 {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: var(--lcd-green);
+  text-transform: uppercase;
+}
+
+.drawer-subtitle {
+  font-size: 12px;
+  color: var(--lcd-text-muted);
+  margin-top: 4px;
+}
+
+.drawer-close-btn {
+  font-family: var(--font-pixel);
+  background: var(--lcd-green-dim);
+  border: 1px solid var(--lcd-border);
+  color: var(--lcd-green);
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Scale Preset Buttons */
+.scale-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.scale-preset-btn {
+  background: var(--lcd-bg-surface);
+  border: 1px solid var(--lcd-border);
+  color: var(--lcd-text);
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.scale-preset-btn:hover {
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+}
+
+.scale-preset-btn.active {
+  background: var(--lcd-green-dim);
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+  box-shadow: 0 0 12px var(--lcd-green-faint);
+}
+
+.scale-preset-btn .preset-name {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+}
+
+.scale-preset-btn .preset-desc {
+  font-size: 10px;
+  color: var(--lcd-text-muted);
+}
+
+/* Fine Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(163, 255, 18, 0.04);
+  border: 1px solid var(--lcd-border);
+  padding: 12px 18px;
+}
+
+.slider-row label {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--lcd-green);
+}
+
+.slider-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  max-width: 360px;
+}
+
+.slider-step-btn {
+  font-family: var(--font-pixel);
+  background: var(--lcd-green-dim);
+  border: 1px solid var(--lcd-border);
+  color: var(--lcd-green);
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#scaleSlider {
+  flex: 1;
+  accent-color: var(--lcd-green);
+  cursor: pointer;
+}
+
+.drawer-tip {
+  font-size: 11px;
+  color: var(--lcd-text-muted);
+  text-align: center;
+  background: rgba(163, 255, 18, 0.03);
+  border: 1px dashed var(--lcd-border);
+  padding: 10px;
+}
+
+/* Quality Grid */
+.quality-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.tab-quality-btn {
+  background: var(--lcd-bg-surface);
+  border: 1px solid var(--lcd-border);
+  color: var(--lcd-text);
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.tab-quality-btn:hover {
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+}
+
+.tab-quality-btn.active {
+  background: var(--lcd-green-dim);
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+  box-shadow: 0 0 12px var(--lcd-green-faint);
+}
+
+.tab-quality-btn .q-title {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+}
+
+.tab-quality-btn .q-desc {
+  font-size: 11px;
+  color: var(--lcd-text-muted);
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVEDIS // HOST CONTROLLER</title>
+  <link rel="stylesheet" href="css/retro-lcd.css">
+  <link rel="stylesheet" href="css/host.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <div>
+          <h1>EVEDIS Host</h1>
+          <p class="subtitle">Wireless Extended Secondary Display System (PC &amp; Mac)</p>
+        </div>
+      </div>
+      <div class="header-status" style="display: flex; align-items: center; gap: 12px;">
+        <div class="user-auth-indicator" id="userAuthIndicator" style="display: none; align-items: center; gap: 8px;">
+          <img id="hostUserAvatar" src="" style="width: 28px; height: 28px; border-radius: 50%;" />
+          <span id="hostUserEmail" style="font-size: 12px; color: var(--text-muted);"></span>
+        </div>
+        <span id="hostStatusBadge" class="badge badge-idle">Ready</span>
+      </div>
+    </header>
+
+    <!-- Top Tablet Pairing Radar (Always Visible Above Fold) -->
+    <div class="pairing-radar-strip" id="pairingRadarStrip">
+      <div class="radar-col radar-pin-col">
+        <span class="radar-label">⚡ TABLET PAIRING PIN</span>
+        <div class="radar-pin-row">
+          <div class="radar-pin-box pin-digits-target" id="radarPinDisplay">------</div>
+          <button id="btnRadarRefreshPin" class="btn btn-secondary btn-xs" title="Regenerate Pairing PIN">🔄 New Code</button>
+        </div>
+      </div>
+
+      <div class="radar-col radar-url-col">
+        <span class="radar-label">🌐 TABLET CONNECT URL</span>
+        <div class="radar-url-row">
+          <input type="text" id="radarTabletUrlInput" class="radar-url-input" readonly />
+          <button id="btnRadarCopyUrl" class="btn btn-secondary btn-xs">Copy</button>
+        </div>
+      </div>
+
+      <div class="radar-col radar-status-col">
+        <span class="radar-label">📱 TABLET LINK STATUS</span>
+        <div class="radar-status-badge" id="radarStatusBadge">
+          <span class="dot dot-waiting" id="radarDot"></span>
+          <span id="radarStatusText">Waiting for tablet...</span>
+        </div>
+      </div>
+
+      <div class="radar-col radar-qr-preview-col">
+        <div class="radar-qr-thumb-wrap" id="radarQrThumbWrap" title="Click to jump to QR code">
+          <img id="radarQrThumb" class="radar-qr-thumb" alt="QR" />
+          <span class="radar-qr-hint">QR CODE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- Step 1: Virtual Extended Display -->
+      <section class="card">
+        <div class="card-header">
+          <div class="step-num">1</div>
+          <div>
+            <h2>Virtual Extended Display</h2>
+            <p class="card-desc">Creates a real second desktop (not just simple mirroring)</p>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="vdisplay-status-box" id="vdisplayBox">
+            <div class="status-indicator" id="vdisplayIndicator"></div>
+            <div>
+              <strong id="vdisplayStatusText">Virtual Display Inactive</strong>
+              <div class="text-muted" id="vdisplayDetails">Target: 1920x1200 (10.1" Tablet Ratio, 60fps)</div>
+            </div>
+          </div>
+          <div class="btn-group">
+            <button id="btnStartVDisplay" class="btn btn-primary">
+              <span class="icon">✨</span> Create Extended Screen
+            </button>
+            <button id="btnStopVDisplay" class="btn btn-secondary" disabled>
+              <span class="icon">⏹</span> Destroy Screen
+            </button>
+          </div>
+
+          <!-- Cloud Companion Helper Box (Shown if helper not running on Mac) -->
+          <div id="vdisplayCompanionGuide" class="companion-guide-box" style="display: none;">
+            <div class="guide-header">
+              <span class="guide-tag">⚡ HOSTED BROWSER SANDBOX DETECTED</span>
+              <button id="btnCloseGuide" class="btn-guide-close">✕</button>
+            </div>
+            <p class="guide-text">
+              Because <code>https://evedis.web.app</code> runs inside your web browser sandbox, macOS security prevents websites from spawning OS-level display drivers directly.
+            </p>
+            <div class="guide-options">
+              <div class="guide-option">
+                <span class="opt-label">OPTION A: ZERO-SETUP IN-BROWSER STREAMING</span>
+                <button id="btnGuideStartCapture" class="btn btn-accent btn-sm">
+                  <span class="icon">📡</span> Select Screen / Window to Stream Now
+                </button>
+                <span class="opt-desc">Streams any window, display, or desktop immediately with 0 terminal!</span>
+              </div>
+              <div class="guide-option">
+                <span class="opt-label">OPTION B: GENUINE 2ND DESKTOP (NATIVE MAC EXTENSION)</span>
+                <div class="guide-cmd-row">
+                  <code>node server/index.js</code>
+                  <button id="btnCopyCommand" class="btn btn-secondary btn-xs">Copy</button>
+                </div>
+                <span class="opt-desc">Run this in your open Mac terminal. EVEDIS will auto-link and create the OS virtual monitor!</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display Arrangement Switcher (Left vs Right) -->
+          <div class="arrangement-box">
+            <label class="arrangement-label">Cursor Transition Edge (Display Arrangement)</label>
+            <div class="arrangement-btn-group">
+              <button id="btnArrangeLeft" class="btn btn-arrangement" data-pos="left">
+                <span class="icon">⬅️</span> Left Display
+              </button>
+              <button id="btnArrangeRight" class="btn btn-arrangement active" data-pos="right">
+                <span class="icon">➡️</span> Right Display
+              </button>
+            </div>
+            <span class="text-xs text-muted">Move your mouse cursor past this edge of your screen to enter the tablet.</span>
+          </div>
+
+          <div class="tip-box">
+            <span class="tip-icon">💡</span>
+            <span>Once enabled, your system has a genuine 2nd desktop in Display Settings. Drag any window or application directly there!</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Screen / Window Streamer -->
+      <section class="card">
+        <div class="card-header">
+          <div class="step-num">2</div>
+          <div>
+            <h2>Screen Streamer</h2>
+            <p class="card-desc">Stream your virtual desktop or any specific window to the tablet</p>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="preview-container">
+            <video id="localPreview" autoplay playsinline muted></video>
+            <div class="preview-overlay" id="previewPlaceholder">
+              <div class="placeholder-icon">🖥️</div>
+              <p>No screen selected yet</p>
+              <span class="text-sm">Click "Select Screen to Share" below</span>
+            </div>
+          </div>
+          <div class="btn-group">
+            <button id="btnStartCapture" class="btn btn-accent">
+              <span class="icon">📡</span> Select Screen to Share
+            </button>
+            <button id="btnStopCapture" class="btn btn-secondary" disabled>
+              <span class="icon">🛑</span> Stop Streaming
+            </button>
+          </div>
+          <div class="stream-stats" id="streamStats" style="display: none;">
+            <div class="stat-pill"><span class="label">FPS:</span> <span id="statFps">60</span></div>
+            <div class="stat-pill"><span class="label">Resolution:</span> <span id="statRes">-</span></div>
+            <div class="stat-pill"><span class="label">Client:</span> <span id="statClient">Disconnected</span></div>
+          </div>
+
+          <!-- Quality & FPS Controls -->
+          <div class="quality-settings-box">
+            <div class="quality-header">
+              <span class="quality-title">⚡ Wi-Fi &amp; Quality Profile</span>
+              <span class="quality-badge" id="activeProfileBadge">1080p @ 60 FPS</span>
+            </div>
+            
+            <div class="preset-buttons-row">
+              <button class="preset-btn active" data-res="1080p" data-fps="60" data-bitrate="6000">1080p 60fps</button>
+              <button class="preset-btn" data-res="720p" data-fps="30" data-bitrate="2500">720p 30fps</button>
+              <button class="preset-btn" data-res="480p" data-fps="30" data-bitrate="1200">480p 30fps</button>
+            </div>
+
+            <div class="custom-quality-row">
+              <div class="quality-field">
+                <label>Resolution</label>
+                <select id="selResolution" class="quality-select">
+                  <option value="1080p" selected>1080p (FHD)</option>
+                  <option value="720p">720p (HD)</option>
+                  <option value="480p">480p (SD)</option>
+                </select>
+              </div>
+              <div class="quality-field">
+                <label>Target FPS</label>
+                <select id="selFps" class="quality-select">
+                  <option value="60" selected>60 FPS (Ultra Smooth)</option>
+                  <option value="30">30 FPS (Standard Wi-Fi)</option>
+                  <option value="15">15 FPS (Slow Wi-Fi)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Tablet Pairing & Connection -->
+      <section class="card card-wide">
+        <div class="card-header">
+          <div class="step-num">3</div>
+          <div>
+            <h2>Connect Your Android Tablet</h2>
+            <p class="card-desc">Scan the QR code or enter the pairing PIN in the tablet app</p>
+          </div>
+        </div>
+        <div class="card-content pairing-layout">
+          <div class="qr-col">
+            <div class="qr-frame">
+              <img id="qrCodeImg" alt="Scan to connect" />
+            </div>
+            <span class="text-sm text-center">Scan with tablet camera or browser</span>
+          </div>
+          <div class="pin-col">
+            <div class="pin-display">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="pin-label">Pairing PIN (One-Time / Regenerates)</span>
+                <button id="btnRefreshPin" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 11px;">🔄 New Code</button>
+              </div>
+              <div class="pin-digits" id="pinDisplay">------</div>
+            </div>
+            <div class="direct-link-box">
+              <span class="text-sm">Tablet Direct URL:</span>
+              <div class="copy-url-row">
+                <input type="text" id="tabletUrlInput" readonly />
+                <button id="btnCopyUrl" class="btn btn-sm">Copy</button>
+              </div>
+            </div>
+            <div class="connection-status-pill" id="clientConnectionBadge">
+              <span class="dot dot-waiting"></span> Waiting for tablet to join Wi-Fi...
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="js/socket.io.min.js"></script>
+  <script src="js/qrcode.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    (function() {
+      const ind = document.getElementById('userAuthIndicator');
+      const av = document.getElementById('hostUserAvatar');
+      const em = document.getElementById('hostUserEmail');
+      
+      const savedDevUser = localStorage.getItem('evedis_dev_user');
+      if (savedDevUser && ind && av && em) {
+        try {
+          const u = JSON.parse(savedDevUser);
+          ind.style.display = 'flex';
+          av.src = u.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=evedis';
+          em.textContent = u.email;
+        } catch(e) {}
+      } else if (typeof firebase !== 'undefined' && firebase.auth && window.__IS_FIREBASE_CONFIGURED__) {
+        firebase.auth().onAuthStateChanged(user => {
+          if (user && ind && av && em) {
+            ind.style.display = 'flex';
+            av.src = user.photoURL || 'https://via.placeholder.com/28';
+            em.textContent = user.email;
+          }
+        });
+      }
+    })();
+  </script>
+  <script src="js/host.js"></script>
+</body>
+</html>

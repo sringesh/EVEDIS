@@ -1,0 +1,229 @@
+/* ===============================================================
+   EVEDIS RETRO LCD DESIGN SYSTEM
+   Inspired by Nokia 3310 Matrix Displays & Cyberpunk Pixel Interfaces
+   =============================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap');
+
+:root {
+  /* Matrix Phosphor Green Palette */
+  --lcd-bg: #070a08;
+  --lcd-bg-surface: #0e1410;
+  --lcd-bg-elevated: #151e18;
+  --lcd-border: rgba(163, 255, 18, 0.35);
+  --lcd-border-bright: #a3ff12;
+  
+  --lcd-green: #a3ff12;
+  --lcd-green-glow: rgba(163, 255, 18, 0.5);
+  --lcd-green-dim: rgba(163, 255, 18, 0.12);
+  --lcd-green-faint: rgba(163, 255, 18, 0.05);
+  
+  --lcd-amber: #ffb800;
+  --lcd-amber-dim: rgba(255, 184, 0, 0.15);
+  --lcd-red: #ff3344;
+  
+  --lcd-text: #ecfae8;
+  --lcd-text-muted: #849c7f;
+  --lcd-text-dim: #4e634b;
+  
+  --lcd-grid: rgba(163, 255, 18, 0.06);
+
+  /* Fonts */
+  --font-pixel: 'Silkscreen', cursive;
+  --font-mono: 'Space Mono', monospace;
+  --font-term: 'VT323', monospace;
+}
+
+/* Background: Phosphor black base, Fullscreen Matrix Digital Rain Canvas */
+body {
+  background-color: #040805;
+  background-image: none;
+  color: var(--lcd-text);
+  font-family: var(--font-mono);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Fullscreen Background Matrix Rain Canvas */
+.fullscreen-matrix-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.38;
+}
+
+/* Technical Corner Markings */
+.bracket-box {
+  position: relative;
+  background: var(--lcd-bg-surface);
+  border: 1px solid var(--lcd-border);
+  padding: 24px;
+}
+
+.bracket-box::before,
+.bracket-box::after {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--lcd-green);
+  line-height: 1;
+}
+
+.bracket-box::before {
+  top: -6px;
+  left: -4px;
+}
+
+.bracket-box::after {
+  bottom: -6px;
+  right: -4px;
+}
+
+/* Glitch / Phosphor Glow Text */
+.pixel-title {
+  font-family: var(--font-pixel);
+  color: var(--lcd-green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px var(--lcd-green-glow);
+}
+
+.pixel-subtitle {
+  font-family: var(--font-term);
+  font-size: 20px;
+  color: var(--lcd-text-muted);
+  letter-spacing: 2px;
+}
+
+/* Retro Pill Badges */
+.lcd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--lcd-border-bright);
+  background: var(--lcd-green-dim);
+  color: var(--lcd-green);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 8px var(--lcd-green-faint);
+}
+
+.lcd-badge-amber {
+  border-color: var(--lcd-amber);
+  background: var(--lcd-amber-dim);
+  color: var(--lcd-amber);
+}
+
+/* Retro Buttons */
+.lcd-btn {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  padding: 12px 20px;
+  border: 1px solid var(--lcd-border-bright);
+  background: var(--lcd-green-dim);
+  color: var(--lcd-green);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  outline: none;
+}
+
+.lcd-btn:hover:not(:disabled) {
+  background: var(--lcd-green);
+  color: #000;
+  box-shadow: 0 0 16px var(--lcd-green-glow);
+  transform: translateY(-1px);
+}
+
+.lcd-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.lcd-btn-secondary {
+  border-color: var(--lcd-border);
+  background: var(--lcd-bg-surface);
+  color: var(--lcd-text);
+}
+
+.lcd-btn-secondary:hover:not(:disabled) {
+  background: var(--lcd-bg-elevated);
+  border-color: var(--lcd-green);
+  color: var(--lcd-green);
+  box-shadow: none;
+}
+
+.lcd-btn-amber {
+  border-color: var(--lcd-amber);
+  color: var(--lcd-amber);
+  background: var(--lcd-amber-dim);
+}
+
+.lcd-btn-amber:hover:not(:disabled) {
+  background: var(--lcd-amber);
+  color: #000;
+  box-shadow: 0 0 16px rgba(255, 184, 0, 0.6);
+}
+
+/* Retro Scanline Overlay (applied to UI headers and backgrounds, NOT video) */
+.scanline-effect {
+  position: relative;
+}
+
+.scanline-effect::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Clean Video Window Frame (PURE video inside, retro chassis outside) */
+.chassis-frame {
+  background: #000;
+  border: 2px solid var(--lcd-border);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.9);
+}
+
+.chassis-header {
+  background: var(--lcd-bg-surface);
+  border-bottom: 1px solid var(--lcd-border);
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--lcd-green);
+}
+
+/* Blinking Terminal Cursor */
+.blink-cursor {
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}

@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVEDIS // WIRELESS EXTENDED DISPLAY SYSTEM</title>
+  <link rel="stylesheet" href="css/retro-lcd.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    /* Hero & Layout */
+    .landing-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 24px 80px;
+    }
+
+    /* Top HUD Telemetry Bar */
+    .telemetry-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--lcd-border);
+      padding-bottom: 16px;
+      margin-bottom: 36px;
+      font-size: 11px;
+      font-family: var(--font-pixel);
+      color: var(--lcd-text-muted);
+    }
+
+    .telemetry-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .telemetry-brand {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 6px;
+    }
+
+    .telemetry-brand-text {
+      font-family: var(--font-pixel);
+      font-size: 18px;
+      color: var(--lcd-green);
+      letter-spacing: 2px;
+      text-shadow: 0 0 12px var(--lcd-green-glow);
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      color: var(--lcd-green);
+      text-shadow: 0 0 10px var(--lcd-green);
+      animation: blink 0.8s step-start infinite;
+      margin-left: 3px;
+      font-size: 16px;
+    }
+
+    .telemetry-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .pixel-matrix-diagram {
+      font-family: var(--font-term);
+      font-size: 15px;
+      color: var(--lcd-green);
+      background: rgba(163, 255, 18, 0.04);
+      border: 1px dashed var(--lcd-border);
+      padding: 12px 14px;
+      margin: 14px 0;
+      line-height: 1.25;
+      white-space: pre;
+      overflow-x: auto;
+      text-shadow: 0 0 8px rgba(163, 255, 18, 0.4);
+    }
+
+    /* Fullscreen Background Matrix Rain Canvas */
+    .fullscreen-matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.38;
+    }
+
+    .landing-wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 24px 60px;
+    }
+
+    /* Scroll Cue */
+    .scroll-cue-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px auto 40px;
+    }
+
+    .scroll-cue-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(14, 20, 16, 0.88);
+      border: 1px dashed var(--lcd-border);
+      color: var(--lcd-green);
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      padding: 12px 24px;
+      text-decoration: none;
+      letter-spacing: 1.5px;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .scroll-cue-link:hover {
+      background: var(--lcd-green-dim);
+      border-color: var(--lcd-green);
+      box-shadow: 0 0 20px var(--lcd-green-glow);
+      transform: translateY(2px);
+    }
+
+    .scroll-cue-icon {
+      display: inline-block;
+      animation: bounceDown 1.5s infinite;
+    }
+
+    @keyframes bounceDown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+
+    /* Dedicated Scroll-Down Creator & Social Network Page */
+    .creator-dossier-section {
+      margin-top: 40px;
+      margin-bottom: 50px;
+      scroll-margin-top: 30px;
+    }
+
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(45px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
+    }
+
+    .reveal-on-scroll.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dossier-masthead {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--lcd-border);
+      padding-bottom: 14px;
+      margin-bottom: 24px;
+    }
+
+    .dossier-tag {
+      font-family: var(--font-term);
+      font-size: 16px;
+      color: var(--lcd-text-muted);
+      letter-spacing: 2px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .dossier-heading {
+      font-family: var(--font-pixel);
+      font-size: 24px;
+      color: var(--lcd-green);
+      text-shadow: 0 0 14px var(--lcd-green-glow);
+      letter-spacing: 2px;
+      margin: 0;
+    }
+
+    .dossier-status-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dossier-console {
+      background: rgba(10, 16, 12, 0.9);
+      border: 1px solid var(--lcd-border-bright);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 24px rgba(163, 255, 18, 0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 32px;
+    }
+
+    .dossier-console-inner {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .dossier-console-inner {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+    }
+
+    .dossier-card-header {
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      color: var(--lcd-green);
+      border-bottom: 1px solid var(--lcd-border);
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: 1px;
+    }
+
+    .terminal-callsign-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .terminal-callsign {
+      font-family: var(--font-pixel);
+      font-size: 12px;
+      background: var(--lcd-green-dim);
+      border: 1px solid var(--lcd-green);
+      color: var(--lcd-green);
+      padding: 3px 8px;
+    }
+
+    .terminal-handle {
+      font-family: var(--font-term);
+      font-size: 20px;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    /* Creator Photo & Story */
+    .creator-bio-top-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .creator-photo-frame {
+      width: 105px;
+      height: 105px;
+      border-radius: 8px;
+      border: 2px solid var(--lcd-green);
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(163, 255, 18, 0.35);
+      background: #000;
+    }
+
+    .creator-portrait-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 15%;
+      display: block;
+    }
+
+    .creator-header-intro {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .creator-dossier-name {
+      font-family: var(--font-pixel);
+      font-size: 20px;
+      color: var(--lcd-green);
+      letter-spacing: 1.5px;
+      margin: 0;
+      text-shadow: 0 0 10px var(--lcd-green-glow);
+    }
+
+    .creator-sub-quote {
+      font-family: var(--font-term);
+      font-size: 16px;
+      color: var(--lcd-text-muted);
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .creator-full-story {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--lcd-text);
+      border-top: 1px dashed var(--lcd-border);
+      padding-top: 18px;
+    }
+
+    .creator-full-story p {
+      margin: 0;
+    }
+
+    .story-lead {
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .story-lead strong {
+      color: var(--lcd-green);
+    }
+
+    .creator-signoff {
+      margin-top: 10px;
+      padding: 12px 16px;
+      background: rgba(163, 255, 18, 0.05);
+      border-left: 3px solid var(--lcd-green);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .signoff-quote {
+      font-family: var(--font-term);
+      font-size: 16px;
+      color: var(--lcd-green);
+      letter-spacing: 1px;
+    }
+
+    .signoff-name {
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      color: #fff;
+    }
+
+    /* Top User Navigation Badge */
+    .top-user-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top-auth-logged-in {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(163, 255, 18, 0.08);
+      border: 1px solid var(--lcd-green);
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px rgba(163, 255, 18, 0.2);
+    }
+
+    .top-auth-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--lcd-green);
+      object-fit: cover;
+    }
+
+    .top-auth-name {
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      color: var(--lcd-green);
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-auth-symbol {
+      width: 6px;
+      height: 6px;
+      background: var(--lcd-green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--lcd-green);
+      animation: blink 1.2s step-start infinite;
+    }
+
+    .top-auth-signout {
+      background: none;
+      border: none;
+      color: var(--lcd-text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+
+    .top-auth-signout:hover {
+      color: var(--lcd-red);
+    }
+
+    .top-auth-login-btn {
+      font-family: var(--font-pixel);
+      font-size: 9px;
+      background: var(--lcd-green-dim);
+      border: 1px solid var(--lcd-border);
+      color: var(--lcd-text);
+      padding: 5px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .top-auth-login-btn:hover {
+      background: var(--lcd-green);
+      color: #000;
+      border-color: var(--lcd-green);
+      box-shadow: 0 0 12px var(--lcd-green-glow);
+    }
+
+    .social-lead-text {
+      font-size: 12px;
+      color: var(--lcd-text-muted);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .social-channels-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .social-channel-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(14, 22, 17, 0.7);
+      border: 1px solid var(--lcd-border);
+      padding: 14px 18px;
+      text-decoration: none;
+      color: var(--lcd-text);
+      transition: all 0.2s ease;
+    }
+
+    .social-channel-btn:hover {
+      background: var(--lcd-green-dim);
+      border-color: var(--lcd-green);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--lcd-green-glow);
+      transform: translateX(4px);
+    }
+
+    .channel-btn-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .channel-btn-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .channel-title {
+      font-family: var(--font-pixel);
+      font-size: 12px;
+      color: var(--lcd-green);
+      letter-spacing: 1px;
+    }
+
+    .channel-desc {
+      font-size: 11px;
+      color: var(--lcd-text-muted);
+    }
+
+    .channel-arrow {
+      font-family: var(--font-pixel);
+      color: var(--lcd-text-muted);
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .social-channel-btn:hover .channel-arrow {
+      color: var(--lcd-green);
+      transform: translateX(3px);
+    }
+
+    .dossier-security-badge {
+      margin-top: 18px;
+      padding: 8px 12px;
+      background: rgba(163, 255, 18, 0.04);
+      border: 1px dashed var(--lcd-border);
+      font-family: var(--font-term);
+      font-size: 13px;
+      color: var(--lcd-text-muted);
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .pulse-beacon {
+      width: 7px;
+      height: 7px;
+      background: var(--lcd-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--lcd-green);
+      animation: blink 1.2s step-start infinite;
+    }
+
+    .retro-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--lcd-green);
+      box-shadow: 0 0 8px var(--lcd-green);
+      animation: blink 1.2s step-start infinite;
+    }
+
+    /* Hero Section */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 36px;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-term);
+      font-size: 24px;
+      color: var(--lcd-green);
+      letter-spacing: 3px;
+    }
+
+    .hero-heading {
+      font-family: var(--font-pixel);
+      font-size: 38px;
+      line-height: 1.2;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(163, 255, 18, 0.35);
+      margin: 0;
+    }
+
+    .hero-heading span {
+      color: var(--lcd-green);
+    }
+
+    .hero-body {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--lcd-text-muted);
+      max-width: 520px;
+    }
+
+    /* Retro LCD Bezel Showcase Frame (Inspired by Nokia & CyberKongz) */
+    .lcd-device-bezel {
+      background: #000;
+      border: 3px solid #1a271c;
+      outline: 1px solid var(--lcd-border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(163, 255, 18, 0.08);
+      position: relative;
+    }
+
+    .bezel-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--lcd-border);
+      margin-bottom: 14px;
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      color: var(--lcd-green);
+    }
+
+    .bezel-signal-icon {
+      letter-spacing: 2px;
+    }
+
+    .bezel-screen-inner {
+      background: #070c08;
+      border: 1px solid var(--lcd-border);
+      padding: 24px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .screen-pixel-header {
+      font-family: var(--font-pixel);
+      font-size: 18px;
+      color: var(--lcd-green);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .screen-pixel-specs {
+      font-family: var(--font-term);
+      font-size: 20px;
+      color: var(--lcd-text-muted);
+      line-height: 1.4;
+    }
+
+    .nokia-art-box {
+      font-family: var(--font-term);
+      font-size: 16px;
+      color: var(--lcd-green);
+      background: var(--lcd-green-faint);
+      border: 1px dashed var(--lcd-border);
+      padding: 12px;
+      margin: 16px 0;
+      line-height: 1.2;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* Auth Box inside Hero */
+    .auth-terminal {
+      background: var(--lcd-bg-surface);
+      border: 1px solid var(--lcd-border);
+      padding: 28px;
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .auth-terminal-header {
+      font-family: var(--font-pixel);
+      font-size: 12px;
+      color: var(--lcd-green);
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .google-btn-retro {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      background: #fff;
+      color: #0b120c;
+      font-family: var(--font-pixel);
+      font-size: 12px;
+      padding: 14px 20px;
+      border: 2px solid var(--lcd-border-bright);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 15px rgba(163, 255, 18, 0.25);
+    }
+
+    .google-btn-retro:hover {
+      background: var(--lcd-green);
+      color: #000;
+      box-shadow: 0 0 25px var(--lcd-green);
+      transform: translateY(-2px);
+    }
+
+    .auth-user-panel {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .user-info-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .user-avatar-retro {
+      width: 48px;
+      height: 48px;
+      border: 2px solid var(--lcd-green);
+      padding: 2px;
+    }
+
+    /* Feature Grid Section */
+    .section-header {
+      border-top: 1px solid var(--lcd-border);
+      padding-top: 36px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .section-title {
+      font-family: var(--font-pixel);
+      font-size: 22px;
+      color: var(--lcd-green);
+      text-transform: uppercase;
+    }
+
+    .section-tag {
+      font-family: var(--font-term);
+      font-size: 18px;
+      color: var(--lcd-text-muted);
+    }
+
+    .features-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .feature-lcd-card {
+      background: var(--lcd-bg-surface);
+      border: 1px solid var(--lcd-border);
+      padding: 24px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .feature-lcd-card:hover {
+      border-color: var(--lcd-green);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(163, 255, 18, 0.1);
+    }
+
+    .feature-num {
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      color: var(--lcd-green);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .feature-heading {
+      font-family: var(--font-pixel);
+      font-size: 14px;
+      color: #fff;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .feature-text {
+      font-size: 13px;
+      color: var(--lcd-text-muted);
+      line-height: 1.6;
+    }
+
+    /* Telemetry Specs Table */
+    .specs-strip {
+      background: var(--lcd-bg-surface);
+      border: 1px solid var(--lcd-border);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 40px;
+    }
+
+    .spec-item {
+      padding: 20px;
+      border-right: 1px solid var(--lcd-border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .spec-item:last-child {
+      border-right: none;
+    }
+
+    .spec-label {
+      font-family: var(--font-term);
+      font-size: 16px;
+      color: var(--lcd-text-muted);
+      text-transform: uppercase;
+    }
+
+    .spec-value {
+      font-family: var(--font-pixel);
+      font-size: 18px;
+      color: var(--lcd-green);
+    }
+
+    /* Footer */
+    .retro-footer {
+      border-top: 1px solid var(--lcd-border);
+      padding-top: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--lcd-text-dim);
+      font-family: var(--font-term);
+      letter-spacing: 1px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Animated Matrix Digital Rain Background -->
+  <canvas id="bgMatrixCanvas" class="fullscreen-matrix-bg"></canvas>
+
+  <div class="landing-wrapper">
+
+    <!-- Top Telemetry Bar with Animated Typing Title -->
+    <header class="telemetry-nav">
+      <div class="telemetry-left">
+        <div class="telemetry-brand">
+          <span class="telemetry-brand-text" id="typedLogo">EVEDIS</span><span class="typing-cursor">█</span>
+        </div>
+        <span class="retro-indicator"></span>
+        <span>SYS.STATUS: ONLINE</span>
+        <span>// WIRELESS PROTOCOL v2.0</span>
+      </div>
+      <div class="telemetry-right">
+        <span>RES: 1920X1200</span>
+        <span>LATENCY: &lt;50MS</span>
+        <div id="topUserBadge" class="top-user-indicator">
+          <button id="btnTopSignIn" class="top-auth-login-btn">
+            <span>🔒</span> GOOGLE SIGN IN
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Grid -->
+    <main class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-eyebrow">// VIRTUAL SECONDARY DISPLAY PROTOCOL</div>
+        <h1 class="hero-heading">
+          TRANSFORM YOUR TABLET INTO A <span>SECONDARY EXTENDED MONITOR</span>.
+        </h1>
+        <p class="hero-body">
+          EVEDIS creates a true wireless extended desktop for your PC or Mac with switchable Left/Right arrangement, hardware WebRTC acceleration, and adaptive "Laptop Match" display scaling.
+        </p>
+
+        <!-- Auth Terminal Box -->
+        <div class="bracket-box auth-terminal" id="authSection">
+          <div class="auth-terminal-header">
+            <span>[ AUTHENTICATION GATEWAY ]</span>
+            <span class="lcd-badge lcd-badge-amber" id="authGateStatus">GOOGLE SSO REQUIRED</span>
+          </div>
+
+          <!-- Logged Out View (Shown for external visitors on Firebase) -->
+          <div id="loggedOutState">
+            <p style="font-size: 13px; color: var(--lcd-text-muted); margin-bottom: 20px; line-height: 1.6;">
+              Sign in with your Google account to access your extended displays, manage paired tablets, and review session telemetry.
+            </p>
+            <button id="btnGoogleSignIn" class="google-btn-retro">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              SIGN IN WITH GOOGLE
+            </button>
+          </div>
+
+          <!-- Logged In View -->
+          <div id="loggedInState" class="auth-user-panel">
+            <div class="user-info-row">
+              <img id="userAvatar" class="user-avatar-retro" alt="User" />
+              <div>
+                <div id="userName" style="font-family: var(--font-pixel); font-size: 13px; color: var(--lcd-green);">USER NAME</div>
+                <div id="userEmail" style="font-size: 12px; color: var(--lcd-text-muted);">user@email.com</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
+              <a href="host.html" class="lcd-btn">
+                🖥️ OPEN HOST CONSOLE
+              </a>
+              <a href="client.html" class="lcd-btn lcd-btn-secondary">
+                📱 OPEN TABLET RECEIVER
+              </a>
+              <a id="btnAdminLink" href="admin.html" class="lcd-btn lcd-btn-amber" style="display: none;">
+                🛡️ ADMIN AUDIT CONSOLE
+              </a>
+              <button id="btnSignOut" class="lcd-btn lcd-btn-secondary" style="margin-left: auto;">
+                SIGN OUT
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Retro Device Bezel Mockup (Inspired by Nokia 3310 Graphic Blueprint) -->
+      <div class="lcd-device-bezel">
+        <div class="bezel-top-bar">
+          <span class="bezel-signal-icon">📶 5G // FULL</span>
+          <span>EVEDIS 10.1" MATRIX</span>
+          <span>[ 100% 🔋 ]</span>
+        </div>
+
+        <div class="bezel-screen-inner scanline-effect">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div class="screen-pixel-header">EVEDIS EXTENDED MATRIX</div>
+              <div class="screen-pixel-specs">
+                STATUS: BROADCASTING READY<br>
+                EDGE: [ ⬅️ LEFT | RIGHT ➡️ ]<br>
+                RESOLUTION: 1920 X 1200 HiDPI
+              </div>
+            </div>
+            <span class="lcd-badge">ACTIVE</span>
+          </div>
+
+          <!-- Pixel Hardware Matrix Topology Diagram -->
+          <div class="pixel-matrix-diagram">
++------------------------------------+
+|  [EVEDIS] VIRTUAL DISPLAY MATRIX   |
+|                                    |
+|   .----------.       .----------.  |
+|   | PC / MAC | &lt;===&gt; |  TABLET  |  |
+|   | PRIMARY  |WebRTC | EXTENDED |  |
+|   '----------' 60FPS '----------'  |
+|                                    |
+|   EDGE ROUTING:  LEFT &lt;---&gt; RIGHT  |
+|   HARDWARE JITTER DELAY: 0 MS      |
++------------------------------------+
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--lcd-green);">
+            <span>// VIRTUAL DISPLAY SUBSYSTEM</span>
+            <span class="blink-cursor">_ READY</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Telemetry Specs Bar -->
+    <div class="specs-strip">
+      <div class="spec-item">
+        <span class="spec-label">Frame Timing</span>
+        <span class="spec-value">60.0 FPS</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Network Playout</span>
+        <span class="spec-value">&lt; 50 MS</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Arrangement</span>
+        <span class="spec-value">LEFT / RIGHT</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Scaling Mode</span>
+        <span class="spec-value">LAPTOP MATCH</span>
+      </div>
+    </div>
+
+    <!-- Feature Grid -->
+    <div class="section-header">
+      <h2 class="section-title">// SYSTEM CAPABILITIES</h2>
+      <span class="section-tag">[ SPEC 2026.10 ]</span>
+    </div>
+
+    <div class="features-container">
+      <div class="feature-lcd-card bracket-box">
+        <span class="feature-num">[ 01 // VIRTUAL DRIVER ]</span>
+        <h3 class="feature-heading">GENUINE EXTENDED DESKTOP</h3>
+        <p class="feature-text">
+          Generates an independent secondary desktop for your PC or laptop without physical dongles. Seamlessly drag any application window, browser tab, or workspace directly onto your tablet.
+        </p>
+      </div>
+
+      <div class="feature-lcd-card bracket-box">
+        <span class="feature-num">[ 02 // DYNAMIC EDGE ]</span>
+        <h3 class="feature-heading">LEFT &amp; RIGHT SWITCHING</h3>
+        <p class="feature-text">
+          Place your tablet to the left or right of your laptop or primary monitor. Reconfigures virtual screen coordinates on the fly so your cursor seamlessly crosses over.
+        </p>
+      </div>
+
+      <div class="feature-lcd-card bracket-box">
+        <span class="feature-num">[ 03 // ZERO JITTER ]</span>
+        <h3 class="feature-heading">HARDWARE WEBRTC PIPELINE</h3>
+        <p class="feature-text">
+          Bypasses the browser jitter buffer with <code>playoutDelayHint: 0</code> and hardware-accelerated H.264 video encoding for lag-free responsive mouse tracking.
+        </p>
+      </div>
+
+      <div class="feature-lcd-card bracket-box">
+        <span class="feature-num">[ 04 // SMART SCALING ]</span>
+        <h3 class="feature-heading">LAPTOP MATCH RESCALING</h3>
+        <p class="feature-text">
+          Calibrates display DPI dynamically on the tablet side so window headers and text appear at the exact physical height of a standard laptop screen.
+        </p>
+      </div>
+    </div>
+
+    <!-- Scroll Down Prompt to Creator Page -->
+    <div class="scroll-cue-container">
+      <a href="#creatorDossier" class="scroll-cue-link">
+        <span class="scroll-cue-icon">▼</span>
+        <span>SCROLL DOWN // ABOUT THE CREATOR &amp; SOCIAL NETWORK</span>
+        <span class="scroll-cue-icon">▼</span>
+      </a>
+    </div>
+
+    <!-- SEPARATE SCROLL DOWN ANIMATION PAGE: ABOUT CREATOR & SOCIAL NETWORK -->
+    <section id="creatorDossier" class="creator-dossier-section reveal-on-scroll">
+      <div class="dossier-masthead">
+        <div class="dossier-title-area">
+          <span class="dossier-tag">// CREATOR ARCHIVE &amp; TRANSMISSION NODE</span>
+          <h2 class="dossier-heading">SYSTEM ARCHITECT // SRINGESH</h2>
+        </div>
+        <div class="dossier-status-strip">
+          <span class="lcd-badge">[ CLEARANCE: ROOT ]</span>
+          <span class="lcd-badge lcd-badge-amber">[ STATUS: BROADCASTING ]</span>
+        </div>
+      </div>
+
+      <div class="dossier-console bracket-box">
+        <div class="dossier-console-inner">
+          
+          <!-- Column 1: About the Creator & Portrait -->
+          <div class="dossier-profile-card">
+            <div class="dossier-card-header">
+              <span class="retro-indicator"></span>
+              <span>ABOUT THE CREATOR // SRINGESH V.</span>
+            </div>
+
+            <!-- Creator Photo & Intro Row -->
+            <div class="creator-bio-top-row">
+              <div class="creator-photo-frame">
+                <img src="assets/sringesh.png" alt="Sringesh V." class="creator-portrait-img" />
+              </div>
+              <div class="creator-header-intro">
+                <span class="terminal-callsign">[ CREATOR &amp; BUILDER ]</span>
+                <h3 class="creator-dossier-name">SRINGESH V.</h3>
+                <p class="creator-sub-quote">"Curious by nature. Driven by ideas. Always building what's next."</p>
+              </div>
+            </div>
+
+            <!-- Full Authentic Story as Requested -->
+            <div class="creator-full-story">
+              <p class="story-lead">
+                <strong>Hey, I'm Sringesh — an engineering student, tech enthusiast, and builder of ideas.</strong>
+              </p>
+              <p>
+                I enjoy exploring the world of technology, experimenting with new concepts, and turning simple ideas into meaningful digital experiences.
+              </p>
+              <p>
+                <strong>EVEDIS</strong> was created from my interest in making technology more seamless and accessible, with a focus on simplifying the wireless display experience. I believe the best innovations don't always have to be complicated — sometimes, a simple idea can make a real difference.
+              </p>
+              <p>
+                For me, building EVEDIS is more than just creating a website. It's about learning, experimenting, solving problems, and bringing an idea to life.
+              </p>
+              <div class="creator-signoff">
+                <span class="signoff-quote"><em>Curious by nature. Driven by ideas. Always building what's next.</em></span>
+                <span class="signoff-name">— <strong>Sringesh V.</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Social Network & Transmission Hub -->
+          <div class="dossier-social-card">
+            <div class="dossier-card-header">
+              <span>// TRANSMISSION CHANNELS &amp; SOCIAL NETWORK</span>
+              <span class="pulse-beacon"></span>
+            </div>
+
+            <p class="social-lead-text">
+              Direct telemetry feeds, open-source repositories, and professional networking links. Connect directly with the creator:
+            </p>
+
+            <div class="social-channels-stack">
+              <a href="https://github.com/sringesh" target="_blank" rel="noopener" class="social-channel-btn">
+                <div class="channel-btn-icon">⚡</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">GITHUB</span>
+                  <span class="channel-desc">Source Code, Core Driver &amp; Open Source Repos</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+
+              <a href="https://x.com/SR1GESH" target="_blank" rel="noopener" class="social-channel-btn">
+                <div class="channel-btn-icon">📡</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">X / TWITTER</span>
+                  <span class="channel-desc">@SR1GESH &bull; Updates, Demos &amp; Insights</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+
+              <a href="https://linkedin.com" target="_blank" rel="noopener" class="social-channel-btn">
+                <div class="channel-btn-icon">🔗</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">LINKEDIN</span>
+                  <span class="channel-desc">Professional Profile, Engineering &amp; Connect</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+
+              <a href="mailto:reachsringesh@gmail.com" class="social-channel-btn">
+                <div class="channel-btn-icon">✉️</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">EMAIL DIRECT</span>
+                  <span class="channel-desc">reachsringesh@gmail.com</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+            </div>
+
+            <div class="dossier-security-badge">
+              <span>🔒 ENCRYPTED END-TO-END // FIREBASE CLOUD VERIFIED</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Retro Footer -->
+    <footer class="retro-footer">
+      <div>EVEDIS PROTOCOL // ALL CHANNELS SECURED VIA FIREBASE CLOUD</div>
+      <div>[ 2026 ] EVEDIS WIRELESS MATRIX PROTOCOL</div>
+    </footer>
+
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // 1. Fullscreen Animated Matrix Digital Rain Background
+    (function() {
+      const canvas = document.getElementById('bgMatrixCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const chars = '0123456789ABCDEFｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜEVEDIS';
+      const fontSize = 15;
+      let columns = 0;
+      let drops = [];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.floor(canvas.width / fontSize) || 30;
+        drops = [];
+        for (let i = 0; i < columns; i++) {
+          drops[i] = Math.floor(Math.random() * -60);
+        }
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      function drawMatrix() {
+        ctx.fillStyle = 'rgba(4, 8, 5, 0.085)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = `${fontSize}px 'VT323', monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+          const char = chars[Math.floor(Math.random() * chars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+
+          // Head of stream has a brighter glow, trailing stream is matrix phosphor green
+          ctx.fillStyle = (Math.random() > 0.88) ? '#ecfae8' : '#a3ff12';
+          ctx.fillText(char, x, y);
+
+          if (y > canvas.height && Math.random() > 0.98) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+
+      setInterval(drawMatrix, 42);
+    })();
+
+    // 2. Main Website Name Typing Animation - STRICTLY ONLY "EVEDIS"
+    (function() {
+      const el = document.getElementById('typedLogo');
+      if (!el) return;
+
+      const targetWord = 'EVEDIS';
+      let charIdx = 0;
+      let isDeleting = false;
+
+      function typeLoop() {
+        if (isDeleting) {
+          charIdx--;
+          el.textContent = targetWord.substring(0, charIdx);
+        } else {
+          charIdx++;
+          el.textContent = targetWord.substring(0, charIdx);
+        }
+
+        let speed = isDeleting ? 70 : 130;
+
+        if (!isDeleting && charIdx === targetWord.length) {
+          // Finished typing EVEDIS: Keep displayed strictly as EVEDIS for 8-12 seconds
+          speed = Math.floor(8000 + Math.random() * 4000);
+          isDeleting = true;
+        } else if (isDeleting && charIdx === 0) {
+          isDeleting = false;
+          speed = 350;
+        }
+
+        setTimeout(typeLoop, speed);
+      }
+
+      el.textContent = '';
+      setTimeout(typeLoop, 200);
+    })();
+
+    // 3. Scroll Down Reveal Animation for Creator Dossier Section
+    (function() {
+      const section = document.getElementById('creatorDossier');
+      if (!section) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            section.classList.add('revealed');
+          }
+        });
+      }, { threshold: 0.12 });
+
+      observer.observe(section);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (matches user's Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required, 1-128 chars, matches userId and auth.uid, immutable)
+    //   - email: string (required, 3-254 chars, valid email format)
+    //   - displayName: string (optional, 1-100 chars)
+    //   - photoURL: string (optional, 1-2048 chars, valid http/https URL)
+    //   - role: string (required, 'admin' | 'user')
+    //   - createdAt: timestamp (required, recent on create, immutable on update)
+    //   - lastLogin: timestamp (required, recent on create, recent or unchanged on update)
+    //
+    // Collection: devices
+    // Document ID: deviceId (alphanumeric/UUID string, 1-128 chars)
+    // Fields:
+    //   - deviceId: string (required, 1-128 chars, matches document ID, immutable)
+    //   - userId: string (required, 1-128 chars, matches owner's auth UID, immutable)
+    //   - deviceName: string (required, 1-100 chars)
+    //   - platform: string (required, 2-30 chars, e.g. 'android', 'macos', 'ios', 'windows', 'linux', 'web')
+    //   - lastSeen: timestamp (required, recent on create, recent or unchanged on update)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user is the resource owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the user is the owner of the existing device document
+    function isDeviceOwner() {
+      return isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Check if requesting user has admin privileges via Auth custom claim OR user document
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          ('admin' in request.auth.token && request.auth.token.admin == true) ||
+          (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+          )
+        );
+    }
+
+    // Validate string length within bounds
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string &&
+        email.size() >= 3 &&
+        email.size() <= 254 &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Validate URL format (must start with http:// or https://)
+    function isValidUrl(url) {
+      return url is string &&
+        url.size() <= 2048 &&
+        (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // Validate optional string (if present, must be string within bounds or null)
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        (
+          request.resource.data[field] is string &&
+          request.resource.data[field].size() >= minLen &&
+          request.resource.data[field].size() <= maxLen
+        );
+    }
+
+    // Validate optional URL (if present, must be valid URL or null)
+    function isValidOptionalUrl(field, maxLen) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        (
+          request.resource.data[field] is string &&
+          request.resource.data[field].size() <= maxLen &&
+          isValidUrl(request.resource.data[field])
+        );
+    }
+
+    // Validate platform string identifier
+    function isValidPlatform(platform) {
+      return platform is string &&
+        platform.size() >= 2 &&
+        platform.size() <= 30 &&
+        platform.matches("^[a-zA-Z0-9_.-]+$");
+    }
+
+    // Validate timestamp is recent (within 5 min past, 1 min future drift)
+    function isRecent(time) {
+      return time is timestamp &&
+        time > request.time - duration.value(5, 'm') &&
+        time <= request.time + duration.value(1, 'm');
+    }
+
+    // ===============================================================
+    // Domain Validators: Users Collection
+    // ===============================================================
+
+    function hasUserRequiredFields() {
+      return request.resource.data.keys().hasAll(['uid', 'email', 'role', 'createdAt', 'lastLogin']);
+    }
+
+    function hasOnlyUserAllowedFields() {
+      return request.resource.data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'lastLogin']);
+    }
+
+    // Common validations for users across create and update
+    function isValidUserCommon(userId) {
+      return hasOnlyUserAllowedFields() &&
+        hasUserRequiredFields() &&
+        request.resource.data.uid is string &&
+        request.resource.data.uid == userId &&
+        request.resource.data.uid.size() >= 1 &&
+        request.resource.data.uid.size() <= 128 &&
+        isValidEmail(request.resource.data.email) &&
+        isValidOptionalString('displayName', 1, 100) &&
+        isValidOptionalUrl('photoURL', 2048) &&
+        request.resource.data.role is string &&
+        request.resource.data.role in ['admin', 'user'];
+    }
+
+    // Validation for user creation
+    function isValidUserCreate(userId) {
+      return isValidUserCommon(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.createdAt is timestamp &&
+        isRecent(request.resource.data.createdAt) &&
+        request.resource.data.lastLogin is timestamp &&
+        isRecent(request.resource.data.lastLogin);
+    }
+
+    // Validation for user update
+    function isValidUserUpdate(userId) {
+      return isValidUserCommon(userId) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.lastLogin is timestamp &&
+        (
+          request.resource.data.lastLogin == resource.data.lastLogin ||
+          isRecent(request.resource.data.lastLogin)
+        );
+    }
+
+    // ===============================================================
+    // Domain Validators: Devices Collection
+    // ===============================================================
+
+    function hasDeviceRequiredFields() {
+      return request.resource.data.keys().hasAll(['deviceId', 'userId', 'deviceName', 'platform', 'lastSeen']);
+    }
+
+    function hasOnlyDeviceAllowedFields() {
+      return request.resource.data.keys().hasOnly(['deviceId', 'userId', 'deviceName', 'platform', 'lastSeen']);
+    }
+
+    // Common validations for devices across create and update
+    function isValidDeviceCommon(deviceId) {
+      return hasOnlyDeviceAllowedFields() &&
+        hasDeviceRequiredFields() &&
+        request.resource.data.deviceId is string &&
+        request.resource.data.deviceId == deviceId &&
+        request.resource.data.deviceId.size() >= 1 &&
+        request.resource.data.deviceId.size() <= 128 &&
+        request.resource.data.userId is string &&
+        request.resource.data.userId.size() >= 1 &&
+        request.resource.data.userId.size() <= 128 &&
+        request.resource.data.deviceName is string &&
+        request.resource.data.deviceName.size() >= 1 &&
+        request.resource.data.deviceName.size() <= 100 &&
+        isValidPlatform(request.resource.data.platform);
+    }
+
+    // Validation for device creation
+    function isValidDeviceCreate(deviceId) {
+      return isValidDeviceCommon(deviceId) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.lastSeen is timestamp &&
+        isRecent(request.resource.data.lastSeen);
+    }
+
+    // Validation for device update
+    function isValidDeviceUpdate(deviceId) {
+      return isValidDeviceCommon(deviceId) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.deviceId == resource.data.deviceId &&
+        request.resource.data.lastSeen is timestamp &&
+        (
+          request.resource.data.lastSeen == resource.data.lastSeen ||
+          isRecent(request.resource.data.lastSeen)
+        );
+    }
+
+    // ===============================================================
+    // Rules: Users Collection
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can only read their own profile document.
+      // Admins (claim or existing profile role == 'admin') can read all user profiles for review/audit.
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can create their own profile. Non-admins cannot create 'admin' roles.
+      allow create: if isOwner(userId) &&
+                       isValidUserCreate(userId) &&
+                       (isAdmin() || request.resource.data.role == 'user');
+
+      // Users can update their own profile; regular users cannot change their role (prevents escalation).
+      // Admins can update any profile and modify roles.
+      allow update: if (isOwner(userId) || isAdmin()) &&
+                       isValidUserUpdate(userId) &&
+                       (isAdmin() || request.resource.data.role == resource.data.role);
+
+      // Users can delete their own profile; admins can delete any user profile.
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // ===============================================================
+    // Rules: Devices Collection
+    // ===============================================================
+
+    match /devices/{deviceId} {
+      // Users can only read devices that belong to them (resource.data.userId == request.auth.uid).
+      // Admins can read all registered devices.
+      allow read: if isDeviceOwner() || isAdmin();
+
+      // Users can only register devices where request.resource.data.userId == request.auth.uid.
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       isValidDeviceCreate(deviceId);
+
+      // Users can only update their own devices. Ownership and deviceId are immutable.
+      allow update: if isDeviceOwner() &&
+                       isValidDeviceUpdate(deviceId);
+
+      // Users can delete their own devices; admins can delete devices for maintenance/cleanup.
+      allow delete: if isDeviceOwner() || isAdmin();
+    }
+
+    // ===============================================================
+    // Rules: WebRTC Signaling Sessions Collection (Cloud Signaling)
+    // ===============================================================
+
+    match /sessions/{pin} {
+      // Allows Host and Tablet Client to exchange WebRTC offer, answer and ICE candidates
+      allow read, write: if true;
+
+      match /candidates/{candidateId} {
+        allow read, write: if true;
+      }
+    }
+
+    // ===============================================================
+    // Default Deny
+    // ===============================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

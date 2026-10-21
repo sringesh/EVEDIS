@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVEDIS // ADMIN USER AUDIT CONSOLE</title>
+  <link rel="stylesheet" href="css/retro-lcd.css">
+  <link rel="stylesheet" href="css/host.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    .admin-container {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--lcd-border);
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--lcd-bg-surface);
+      border: 1px solid var(--lcd-border);
+      padding: 20px;
+      position: relative;
+    }
+    .stat-value {
+      font-family: var(--font-pixel);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--lcd-green);
+      margin-top: 6px;
+      text-shadow: 0 0 10px var(--lcd-green-glow);
+    }
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    .user-table th {
+      background: var(--lcd-bg-elevated);
+      color: var(--lcd-green);
+      font-family: var(--font-pixel);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--lcd-border);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .user-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--lcd-border);
+      vertical-align: middle;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-img {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--lcd-green);
+      padding: 1px;
+    }
+    .role-badge {
+      display: inline-block;
+      font-family: var(--font-pixel);
+      padding: 4px 8px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .role-admin {
+      background: var(--lcd-amber-dim);
+      border: 1px solid var(--lcd-amber);
+      color: var(--lcd-amber);
+    }
+    .role-user {
+      background: var(--lcd-green-dim);
+      border: 1px solid var(--lcd-green);
+      color: var(--lcd-green);
+    }
+    .denied-card {
+      background: rgba(255, 51, 68, 0.1);
+      border: 1px solid var(--lcd-red);
+      padding: 30px;
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-header">
+      <div>
+        <a href="index.html" style="color: var(--lcd-text-muted); text-decoration: none; font-size: 12px; font-family: var(--font-pixel);">
+          ← RETURN TO PORTAL
+        </a>
+        <h1 style="margin-top: 8px;">// ADMIN AUDIT CONSOLE</h1>
+      </div>
+      <div>
+        <span class="lcd-badge">AUDITOR ACCESS GRANTED</span>
+      </div>
+    </div>
+
+    <!-- Access Denied Card -->
+    <div id="accessDeniedCard" class="denied-card bracket-box">
+      <h2 style="color: var(--lcd-red); font-family: var(--font-pixel); font-size: 16px;">🔒 ACCESS RESTRICTED</h2>
+      <p style="margin-top: 10px; color: var(--lcd-text-muted); font-size: 13px;">
+        You must be authenticated with an authorized Administrator Google account to inspect database records.
+      </p>
+      <a href="index.html" class="lcd-btn" style="margin-top: 18px; text-decoration: none;">
+        SIGN IN WITH ADMIN ACCOUNT
+      </a>
+    </div>
+
+    <!-- Admin Content -->
+    <div id="adminContent" style="display: none;">
+      <div class="stats-row">
+        <div class="stat-card bracket-box">
+          <span class="text-sm">// REGISTERED USERS</span>
+          <div class="stat-value" id="statTotalUsers">-</div>
+        </div>
+        <div class="stat-card bracket-box">
+          <span class="text-sm">// ACTIVE DISPLAY LINKS</span>
+          <div class="stat-value" id="statActiveSessions">-</div>
+        </div>
+        <div class="stat-card bracket-box">
+          <span class="text-sm">// SECURITY LAYER</span>
+          <div class="stat-value" style="font-size: 16px; color: var(--lcd-green); margin-top: 10px;">
+            STRICT RBAC PROTOCOL
+          </div>
+        </div>
+      </div>
+
+      <div class="card bracket-box" style="padding: 0; overflow: hidden;">
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>USER IDENTITY</th>
+              <th>ACCESS ROLE</th>
+              <th>REGISTRATION</th>
+              <th>LAST LOGIN TIMESTAMP</th>
+              <th>FIREBASE UID</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 28px; color: var(--lcd-text-muted);">
+                QUERYING FIRESTORE SECURITY DATABASE...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const accessDeniedCard = document.getElementById('accessDeniedCard');
+    const adminContent = document.getElementById('adminContent');
+    const userTableBody = document.getElementById('userTableBody');
+    const statTotalUsers = document.getElementById('statTotalUsers');
+    const statActiveSessions = document.getElementById('statActiveSessions');
+
+    // Check local dev mode user
+    const devUserJson = localStorage.getItem('evedis_dev_user');
+    let devUser = null;
+    try {
+      if (devUserJson) devUser = JSON.parse(devUserJson);
+    } catch (e) {}
+
+    function renderAuditTable(usersList) {
+      adminContent.style.display = 'block';
+      accessDeniedCard.style.display = 'none';
+      statTotalUsers.textContent = usersList.length;
+      statActiveSessions.textContent = Math.max(1, usersList.length);
+
+      userTableBody.innerHTML = '';
+      usersList.forEach(u => {
+        const tr = document.createElement('tr');
+        const roleClass = u.role === 'admin' ? 'role-admin' : 'role-user';
+        tr.innerHTML = `
+          <td>
+            <div class="user-cell">
+              <img class="user-img" src="${u.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + u.uid}" alt="Avatar" />
+              <div>
+                <strong style="color: #fff;">${u.displayName || 'ANONYMOUS'}</strong>
+                <div style="color: var(--lcd-text-muted); font-size: 11px;">${u.email}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="role-badge ${roleClass}">${u.role || 'USER'}</span></td>
+          <td>${u.createdAtStr || 'Today'}</td>
+          <td>${u.lastLoginStr || 'Just now'}</td>
+          <td><code style="font-size: 11px; color: var(--lcd-green);">${u.uid.substring(0, 12)}...</code></td>
+        `;
+        userTableBody.appendChild(tr);
+      });
+    }
+
+    // If running in dev mode or local admin:
+    if (devUser && devUser.role === 'admin') {
+      const mockAudit = [
+        {
+          uid: devUser.uid,
+          displayName: devUser.displayName,
+          email: devUser.email,
+          photoURL: devUser.photoURL,
+          role: 'admin',
+          createdAtStr: '2026-10-20',
+          lastLoginStr: new Date().toLocaleTimeString() + ' (Local Active)'
+        },
+        {
+          uid: 'client-tab-10s',
+          displayName: 'Android Tablet (10.1")',
+          email: 'device@evedis.local',
+          photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=tablet',
+          role: 'user',
+          createdAtStr: '2026-10-20',
+          lastLoginStr: 'Connected via Wi-Fi'
+        }
+      ];
+      renderAuditTable(mockAudit);
+    } else if (typeof firebase !== 'undefined' && firebase.auth && window.__IS_FIREBASE_CONFIGURED__) {
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          accessDeniedCard.style.display = 'block';
+          adminContent.style.display = 'none';
+          return;
+        }
+
+        try {
+          const snapshot = await db.collection('users').get();
+          const list = [];
+          snapshot.forEach(doc => {
+            const d = doc.data();
+            list.push({
+              uid: doc.id,
+              displayName: d.displayName,
+              email: d.email,
+              photoURL: d.photoURL,
+              role: d.role,
+              createdAtStr: d.createdAt ? new Date(d.createdAt.toDate()).toLocaleDateString() : 'N/A',
+              lastLoginStr: d.lastLogin ? new Date(d.lastLogin.toDate()).toLocaleString() : 'N/A'
+            });
+          });
+          renderAuditTable(list);
+        } catch (err) {
+          console.warn('Access denied to auditor console:', err);
+          accessDeniedCard.style.display = 'block';
+          adminContent.style.display = 'none';
+        }
+      });
+    } else {
+      accessDeniedCard.style.display = 'block';
+      adminContent.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
