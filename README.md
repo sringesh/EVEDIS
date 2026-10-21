@@ -44,10 +44,12 @@ Once installed, you can control EVEDIS from **anywhere in your terminal**:
 
 | Command | Action |
 |---|---|
-| `evedis` | **Launch EVEDIS Host Server** (opens LCD dashboard) |
-| `ed` or `./evedis ed` | **Turn ON / Create Extended Display** instantly |
-| `td` or `pd` or `./evedis td` | **Turn OFF / Terminate Display** & gather all windows to Screen 1 |
-| `./evedis kill` | **Shut down** display driver and background server |
+| `evedis open` | **Launch EVEDIS** & automatically open Host Console in Chrome |
+| `evedis clean` | **Terminate Display & Gather Windows** safely back to Screen 1 |
+| `evedis ed` (or `ed`) | **Turn ON / Create Extended Display** instantly |
+| `evedis td` (or `td` / `pd`) | **Turn OFF / Terminate Display** & gather all windows to Screen 1 |
+| `evedis status` | **Check server & display status** |
+| `evedis kill` | **Shut down** display driver and background server |
 
 ### ⌨️ Terminal Interactive Keys (While EVEDIS is running)
 | Key | Action |

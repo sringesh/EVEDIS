@@ -68,7 +68,24 @@ fi
 
 chmod +x evedis bin/evedis.js
 
-# 6. Install shell aliases into ~/.zshrc and ~/.bashrc
+# 6. Install global command into PATH so 'evedis open' works instantly everywhere
+INSTALL_BIN=""
+if [ -d "/opt/homebrew/bin" ] && [ -w "/opt/homebrew/bin" ]; then
+  INSTALL_BIN="/opt/homebrew/bin"
+elif [ -d "/usr/local/bin" ] && [ -w "/usr/local/bin" ]; then
+  INSTALL_BIN="/usr/local/bin"
+else
+  mkdir -p "$HOME/.local/bin"
+  INSTALL_BIN="$HOME/.local/bin"
+fi
+
+if [ -n "$INSTALL_BIN" ]; then
+  ln -sf "$INSTALL_DIR/evedis" "$INSTALL_BIN/evedis"
+  ln -sf "$INSTALL_DIR/evedis" "$INSTALL_BIN/ed" 2>/dev/null || true
+  ln -sf "$INSTALL_DIR/evedis" "$INSTALL_BIN/td" 2>/dev/null || true
+fi
+
+# 7. Also install persistent shell aliases into ~/.zshrc and ~/.bashrc
 add_alias_if_missing() {
   local file="$1"
   if [ -f "$file" ]; then
@@ -93,9 +110,9 @@ add_alias_if_missing "$HOME/.zshrc"
 add_alias_if_missing "$HOME/.bashrc"
 
 echo -e "\n${GREEN}✔ EVEDIS is installed and ready!${RESET}"
-echo -e "${CYAN}Tip: From now on, you can type ${BOLD}evedis${RESET}${CYAN} anywhere in Terminal to launch!${RESET}"
-echo -e "${CYAN}Use ${BOLD}ed${RESET}${CYAN} to create display and ${BOLD}td${RESET}${CYAN} to terminate.${RESET}\n"
+echo -e "${CYAN}Tip: From now on, you can type ${BOLD}evedis open${RESET}${CYAN} anywhere in Terminal to launch!${RESET}"
+echo -e "${CYAN}Use ${BOLD}evedis clean${RESET}${CYAN} to terminate display and gather windows.${RESET}\n"
 echo -e "${GREEN}🚀 Launching EVEDIS Host Server now...${RESET}\n"
 
-# 7. Launch EVEDIS with auto-open browser
+# 8. Launch EVEDIS with auto-open browser
 exec "$INSTALL_DIR/evedis" --open "$@"

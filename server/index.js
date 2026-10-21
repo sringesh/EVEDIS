@@ -18,9 +18,86 @@ const PORT = process.env.PORT || 4040;
 const cliArg = (process.argv[2] || '').toLowerCase();
 
 // -------------------------------------------------------------
-// FAST CLI SHORTCUTS (ed, td, pd, stop, terminate, kill, shortcuts)
+// FAST CLI SHORTCUTS (open, clean, ed, td, pd, stop, status)
 // -------------------------------------------------------------
-if (['td', 'pd', 'stop', 'terminate', 'off'].includes(cliArg)) {
+if (['help', '--help', '-h'].includes(cliArg)) {
+  console.log('\n\x1b[1m\x1b[38;2;163;255;18mEVEDIS CLI Commands:\x1b[0m');
+  console.log('  \x1b[36mevedis open\x1b[0m       Launch EVEDIS and open the host console in Chrome');
+  console.log('  \x1b[36mevedis clean\x1b[0m      Terminate external display & return all windows to Screen 1');
+  console.log('  \x1b[36mevedis ed\x1b[0m         Turn ON / create the external display');
+  console.log('  \x1b[36mevedis td\x1b[0m         Turn OFF / terminate the external display');
+  console.log('  \x1b[36mevedis status\x1b[0m     Check server and display status');
+  console.log('  \x1b[36mevedis kill\x1b[0m       Stop server and virtual display completely\n');
+  process.exit(0);
+}
+
+// "evedis open": Opens the host web console in Chrome (or boots server if stopped)
+if (['open', 'start', 'launch'].includes(cliArg)) {
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: PORT,
+    path: '/api/status',
+    method: 'GET',
+    timeout: 800
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      console.log('\x1b[32m✔ EVEDIS server is active!\x1b[0m');
+      console.log('\x1b[36m🚀 Opening http://localhost:' + PORT + '/host in Google Chrome...\x1b[0m');
+      openBrowser(`http://localhost:${PORT}/host`);
+      process.exit(0);
+    });
+  });
+
+  req.on('error', () => {
+    console.log('\x1b[36m🚀 Starting EVEDIS Host Server and opening web console...\x1b[0m');
+    process.argv.push('--open');
+    bootServer();
+  });
+
+  req.end();
+  return;
+}
+
+// "evedis status": Query current server and display status
+if (['status', 'info'].includes(cliArg)) {
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: PORT,
+    path: '/api/status',
+    method: 'GET',
+    timeout: 1000
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try {
+        const s = JSON.parse(data);
+        console.log('\n\x1b[1m\x1b[32m● EVEDIS Server: ONLINE on port ' + PORT + '\x1b[0m');
+        console.log('  Host Console:   http://localhost:' + PORT + '/host');
+        console.log('  Tablet Connect: ' + s.tabletURL);
+        console.log('  Pairing PIN:    ' + s.pin);
+        console.log('  Virtual Display:' + (s.vDisplay && s.vDisplay.status === 'active' ? ' ● ACTIVE (Screen 2)' : ' ○ STANDBY'));
+        console.log('  Arrangement:    ' + s.position + '\n');
+      } catch (e) {
+        console.log(data);
+      }
+      process.exit(0);
+    });
+  });
+
+  req.on('error', () => {
+    console.log('\n\x1b[33m○ EVEDIS Server is currently STOPPED.\x1b[0m');
+    console.log('Run \x1b[1m\x1b[36mevedis open\x1b[0m to launch.\n');
+    process.exit(0);
+  });
+
+  req.end();
+  return;
+}
+
+if (['td', 'pd', 'stop', 'terminate', 'off', 'clean'].includes(cliArg)) {
   console.log('\x1b[33m🛑 Terminating EVEDIS Virtual Display and restoring windows...\x1b[0m');
   
   // 1. Notify server if running
@@ -60,7 +137,7 @@ fi
     } catch (e) {}
   }
 
-  console.log('\x1b[32m✔ EVEDIS Virtual Display terminated. All windows gathered back to Screen 1.\x1b[0m');
+  console.log('\x1b[32m✔ EVEDIS Clean: Virtual display terminated. All windows gathered back to Screen 1.\x1b[0m');
   process.exit(0);
 }
 
