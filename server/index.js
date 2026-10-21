@@ -263,49 +263,18 @@ async function refreshPairingCode() {
 }
 
 // -------------------------------------------------------------
-// TERMINAL LCD MONITOR DASHBOARD & ANIMATION
+// TERMINAL LCD MONITOR DASHBOARD (CLEAN & SNAPPY)
 // -------------------------------------------------------------
-async function playStartupAnimation() {
+function showStartupBanner() {
   if (!process.stdout.isTTY) return;
+  process.stdout.write('\x1b[2J\x1b[H');
+}
 
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  process.stdout.write('\x1b[2J\x1b[H\x1b[?25l');
-
-  const ascii = [
-    ' ███████╗██╗   ██╗███████╗██████╗ ██╗███████╗',
-    ' ██╔════╝██║   ██║██╔════╝██╔══██╗██║██╔════╝',
-    ' █████╗  ██║   ██║█████╗  ██║  ██║██║███████╗',
-    ' ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║  ██║██║╚════██║',
-    ' ███████╗ ╚████╔╝ ███████╗██████╔╝██║███████║',
-    ' ╚══════╝  ╚═══╝  ╚══════╝╚═════╝ ╚═╝╚══════╝'
-  ];
-
-  const colors = [
-    '\x1b[38;2;0;100;160m',
-    '\x1b[38;2;0;229;255m',
-    '\x1b[38;2;163;255;18m'
-  ];
-
-  for (let c of colors) {
-    process.stdout.write('\x1b[H');
-    console.log(c + C.bold + ascii.join('\n') + C.reset + '\n');
-    await sleep(60);
-  }
-
-  const steps = [
-    '⚡ EVEDIS ENGINE // INITIALIZING NEURAL FRAMEBUFFER...',
-    '✔ PROBING HARDWARE: macOS CoreGraphics CGVirtualDisplay [READY]',
-    '✔ ALLOCATING EXTENDED MONITOR: 1920x1200 @ 60 FPS HiDPI [AUTO]',
-    `✔ WEBRTC SIGNALING & LAN SERVER: http://${getLocalIP()}:${PORT} [ONLINE]`
-  ];
-
-  for (let s of steps) {
-    console.log(C.cyan + s + C.reset);
-    await sleep(40);
-  }
-
-  await sleep(100);
-  process.stdout.write('\x1b[?25h');
+function makeBoxLine(label, val, innerW = 67) {
+  const lLen = stripAnsi(label).length;
+  const vLen = stripAnsi(val).length;
+  const space = Math.max(1, innerW - lLen - vLen);
+  return '   │ ' + label + ' '.repeat(space) + val + ' │';
 }
 
 async function renderTerminalDashboard() {
@@ -315,47 +284,25 @@ async function renderTerminalDashboard() {
   try {
     const net = getNetworkDetails();
     const localIP = net.ip;
-    const tabletURL = `http://${localIP}:${PORT}/client.html?pin=${currentPIN}`;
-    const qrRaw = await qrcode.toString(tabletURL, { type: 'terminal', small: true });
-    const qrLines = qrRaw.split('\n').filter(l => stripAnsi(l).length > 0);
-
     const isAttached = !!vDisplayProcess;
-    const statusText = isAttached ? C.green + C.bold + '● ONLINE (ATTACHED)' + C.reset : C.red + '○ OFFLINE (DETACHED)' + C.reset;
-    const resText = isAttached && vDisplayInfo ? `${vDisplayInfo.width}x${vDisplayInfo.height} @ ${vDisplayInfo.fps}Hz` : '1920x1200 @ 60Hz (Standby)';
-    const edgeText = currentPosition === 'left' ? C.amber + C.bold + 'LEFT OF MAC [L]' + C.reset : C.amber + C.bold + 'RIGHT OF MAC [R]' + C.reset;
-    const clientCountText = clientSockets.size > 0 ? C.green + C.bold + `${clientSockets.size} Tablet(s) Active` + C.reset : C.gray + '0 Tablet(s) Paired' + C.reset;
-    const qualityText = `${currentQuality.resolution} @ ${currentQuality.fps}Hz (${currentQuality.bitrate}k)`;
+    const W = 77;
+    const innerW = 67;
 
-    const leftBox = [
-      C.cyan + '┌── LCD VIRTUAL DISPLAY ────────────┐' + C.reset,
-      makeLine(C.gray + 'STATUS' + C.reset, statusText),
-      makeLine(C.gray + 'RESOLUTION' + C.reset, C.white + resText + C.reset),
-      makeLine(C.gray + 'EDGE POSITION' + C.reset, edgeText),
-      makeLine(C.gray + 'DRIVER' + C.reset, C.white + 'CoreGraphics (Native)' + C.reset),
-      makeLine(C.gray + 'CONNECTED' + C.reset, clientCountText),
-      makeLine(C.gray + 'STREAM QUALITY' + C.reset, C.green + C.bold + qualityText + C.reset),
-      C.cyan + '├── QUICK PAIRING ACCESS ───────────┤' + C.reset,
-      makeLine(C.gray + 'PAIRING PIN' + C.reset, C.pinBg + '  ' + currentPIN.split('').join(' ') + '  ' + C.reset),
-      makeLine(C.gray + 'HOST CONSOLE' + C.reset, C.white + `localhost:${PORT}/host` + C.reset),
-      makeLine(C.gray + 'WI-FI IP' + C.reset, C.white + `${localIP}:${PORT}` + C.reset),
-      C.cyan + '├── CONNECTION INSTRUCTIONS ────────┤' + C.reset,
-      makeLine(C.gray + '1. Camera Scan' + C.reset, C.white + 'Point at QR code' + C.reset),
-      makeLine(C.gray + '2. Browser Tap' + C.reset, C.white + 'Open Wi-Fi IP' + C.reset),
-      makeLine(C.gray + '3. Touch Screen' + C.reset, C.white + 'Pinch/Drag/Stylus' + C.reset),
-      C.cyan + '├── TELEMETRY ──────────────────────┤' + C.reset,
-      makeLine(C.gray + 'NETWORK LINK' + C.reset, C.green + net.type + C.reset),
-      C.cyan + '└───────────────────────────────────┘' + C.reset
-    ];
+    const vDispText = isAttached 
+      ? C.green + C.bold + `● ONLINE (${vDisplayInfo ? vDisplayInfo.width + 'x' + vDisplayInfo.height : '1920x1200'} @ 60Hz)` + C.reset 
+      : C.amber + '○ STANDBY (Set up in Web Console)' + C.reset;
 
-    const rightBox = [
-      C.cyan + '┌── SCAN WITH TABLET CAMERA ────────┐' + C.reset,
-      ...qrLines.map(line => '│  ' + line + '  │'),
-      C.cyan + '└───────────────────────────────────┘' + C.reset
-    ];
+    const resText = isAttached && vDisplayInfo 
+      ? `${vDisplayInfo.width}x${vDisplayInfo.height} @ ${vDisplayInfo.fps}Hz (Active)` 
+      : '1920x1200 @ 60Hz (On Web Activation)';
 
-    const leftW = 37;
-    const rightW = 37;
-    const totalW = leftW + rightW + 3;
+    const edgeText = currentPosition === 'left' 
+      ? C.amber + C.bold + 'LEFT OF PRIMARY [L]' + C.reset 
+      : C.amber + C.bold + 'RIGHT OF PRIMARY [R]' + C.reset;
+
+    const clientCountText = clientSockets.size > 0 
+      ? C.green + C.bold + `${clientSockets.size} Tablet(s) Active` + C.reset 
+      : C.gray + '0 Tablet(s) Paired' + C.reset;
 
     // Move cursor to top-left and clear display
     process.stdout.write('\x1b[H\x1b[J');
@@ -370,24 +317,44 @@ async function renderTerminalDashboard() {
     console.log('');
 
     // LCD Chassis
-    console.log(C.dark + '╔' + '═'.repeat(totalW) + '╗' + C.reset);
-    const headerTitle = ' ⚡ EVEDIS LCD MONITOR // VIRTUAL DISPLAY MATRIX';
+    console.log(C.dark + '╔' + '═'.repeat(W) + '╗' + C.reset);
+    const headerTitle = ' ⚡ EVEDIS LCD MONITOR // HOST SERVER STARTED';
     const tag = isAttached ? ' [● ACTIVE] ' : ' [○ STANDBY] ';
     const tagStyle = isAttached ? C.activeTag : C.inactiveTag;
-    const midSpace = totalW - headerTitle.length - tag.length;
+    const midSpace = W - headerTitle.length - tag.length;
     console.log(C.dark + '║' + C.green + C.bold + headerTitle + C.reset + ' '.repeat(Math.max(1, midSpace)) + tagStyle + tag + C.reset + C.dark + '║' + C.reset);
-    console.log(C.dark + '╠' + '═'.repeat(leftW + 1) + '╦' + '═'.repeat(rightW + 1) + '╣' + C.reset);
+    console.log(C.dark + '╠' + '═'.repeat(W) + '╣' + C.reset);
 
-    for (let i = 0; i < 18; i++) {
-      const l = padVisible(leftBox[i] || '', leftW);
-      const r = padVisible(rightBox[i] || '', rightW);
-      console.log(C.dark + '║ ' + C.reset + l + C.dark + ' ║ ' + C.reset + r + C.dark + ' ║' + C.reset);
-    }
+    const lines = [
+      '',
+      '   ' + C.green + C.bold + '● EVEDIS SERVER STARTED ON LOCALHOST' + C.reset,
+      '     ' + C.gray + 'Host controller is active. Create your external display in web console:' + C.reset,
+      '',
+      '   ' + C.gray + 'HOST WEB CONSOLE:   ' + C.white + C.bold + 'http://localhost:' + PORT + '/host' + C.reset,
+      '   ' + C.gray + 'TABLET CONNECT URL: ' + C.cyan + 'http://' + localIP + ':' + PORT + '/client.html?pin=' + currentPIN + C.reset,
+      '   ' + C.gray + 'PAIRING PIN:        ' + C.pinBg + '  ' + currentPIN.split('').join(' ') + '  ' + C.reset,
+      '',
+      '   ' + C.cyan + '┌── DISPLAY & NETWORK STATUS ' + '─'.repeat(innerW - 25) + '┐' + C.reset,
+      makeBoxLine(C.gray + 'VIRTUAL DISPLAY:' + C.reset, vDispText),
+      makeBoxLine(C.gray + 'RESOLUTION:' + C.reset, C.white + resText + C.reset),
+      makeBoxLine(C.gray + 'EDGE POSITION:' + C.reset, edgeText),
+      makeBoxLine(C.gray + 'WI-FI INTERFACE:' + C.reset, C.white + net.type + ' (' + localIP + ':' + PORT + ')' + C.reset),
+      makeBoxLine(C.gray + 'TABLET CLIENTS:' + C.reset, clientCountText),
+      '   ' + C.cyan + '└' + '─'.repeat(innerW + 2) + '┘' + C.reset,
+      '',
+      '   ' + C.green + '👉 Open http://localhost:' + PORT + '/host in your browser to create display!' + C.reset,
+      ''
+    ];
 
-    console.log(C.dark + '╠' + '═'.repeat(totalW) + '╣' + C.reset);
-    const hotkeys = ' ' + C.green + C.bold + 'FAST KEYS:' + C.reset + ' [SPACE] Screen  [L/R] Edge  [N] New PIN  [O] Web  [Q] Exit';
-    console.log(C.dark + '║' + C.reset + padVisible(hotkeys, totalW) + C.dark + '║' + C.reset);
-    console.log(C.dark + '╚' + '═'.repeat(totalW) + '╝' + C.reset);
+    lines.forEach(l => {
+      const interior = padVisible(l, W);
+      console.log(C.dark + '║' + C.reset + interior + C.dark + '║' + C.reset);
+    });
+
+    console.log(C.dark + '╠' + '═'.repeat(W) + '╣' + C.reset);
+    const hotkeys = ' FAST KEYS: [O] Open Web Console  [N] New PIN  [L/R] Edge  [Q] Exit Server';
+    console.log(C.dark + '║ ' + C.green + C.bold + padVisible(hotkeys, W - 2) + C.dark + ' ║' + C.reset);
+    console.log(C.dark + '╚' + '═'.repeat(W) + '╝' + C.reset);
   } catch (e) {
   } finally {
     isRenderingDashboard = false;
@@ -415,9 +382,7 @@ function setupTerminalHotkeys() {
 
     const name = key ? (key.name || str) : str;
 
-    if (name === 'space') {
-      toggleVirtualDisplay();
-    } else if (name === 'l' || str === 'l' || str === 'L') {
+    if (name === 'l' || str === 'l' || str === 'L') {
       setArrangement('left');
     } else if (name === 'r' || str === 'r' || str === 'R') {
       setArrangement('right');
@@ -575,29 +540,21 @@ io.on('connection', (socket) => {
 });
 
 // -------------------------------------------------------------
-// SERVER BOOT & AUTO-START
+// SERVER BOOT (VIRTUAL DISPLAY IN STANDBY UNTIL ACTIVATED IN WEB CONSOLE)
 // -------------------------------------------------------------
 server.listen(PORT, '0.0.0.0', async () => {
   const localIP = getLocalIP();
-  const shouldAutoStart = !process.argv.includes('--no-auto') && process.platform === 'darwin';
 
   if (process.stdout.isTTY) {
-    await playStartupAnimation();
     dashboardInitialized = true;
+    showStartupBanner();
+    renderTerminalDashboard();
   } else {
     console.log(`🚀 EVEDIS Host Server running on http://localhost:${PORT}/host`);
     console.log(`📱 Tablet Connect: http://${localIP}:${PORT}/client.html?pin=${currentPIN}`);
   }
 
-  // Auto-create virtual display immediately on launch
-  if (shouldAutoStart) {
-    try {
-      await startVirtualDisplay();
-    } catch (e) {}
-  }
-
   setupTerminalHotkeys();
-  renderTerminalDashboard();
 
   if (process.argv.includes('--open')) {
     openBrowser(`http://localhost:${PORT}/host`);

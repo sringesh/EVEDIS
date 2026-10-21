@@ -12,9 +12,9 @@ Unlike basic screen mirroring, EVEDIS creates a **genuine independent secondary 
 
 ---
 
-## ⚡ Fast Start: The Single Command (Auto-Host + Auto-Display)
+## ⚡ Fast Start: The Single Command
 
-EVEDIS now includes a **single fast key command** that automatically starts the host server, **immediately creates your macOS extended virtual monitor**, renders a Claude-style animated startup banner, and brings up a **retro LCD control monitor directly in your terminal** with an interactive scannable QR code!
+EVEDIS starts with a **single fast command** in your terminal. It boots the host server, displays the bold `EVEDIS` banner and retro LCD status monitor with your localhost and tablet links, and stays ready:
 
 ```bash
 # In the cloned repo:
@@ -24,40 +24,47 @@ EVEDIS now includes a **single fast key command** that automatically starts the 
 evedis
 ```
 
-### 📺 Interactive Terminal LCD Monitor & Fast Keys
-When you launch EVEDIS in your terminal, an interactive retro LCD dashboard boots up:
-* **Real Scannable QR Code**: Point your tablet's camera directly at your laptop's terminal to connect instantly!
-* **Dynamic Pairing PIN**: Displayed in high-visibility segmented digital characters.
-* **Live Telemetry**: Real-time display state (`ONLINE / ATTACHED`), resolution (`1920x1200 @ 60Hz`), edge arrangement, and connected tablets.
+### 📺 Terminal LCD Monitor & Web Activation
+Running EVEDIS brings up the retro LCD monitor in your terminal:
+* **Server Status**: Shows server online with direct links for localhost and your tablet.
+* **Standby Mode**: The virtual display driver stays safely in standby until you click **"Create Extended Screen"** on the website (`http://localhost:4040/host`).
+* **Live Synchronization**: Once you create the display on the website, the terminal LCD dynamically switches from `[○ STANDBY]` to `[● ACTIVE]`!
 
-```
+```text
 ╔═════════════════════════════════════════════════════════════════════════════╗
-║ ⚡ EVEDIS LCD MONITOR // VIRTUAL DISPLAY MATRIX                   [● ACTIVE] ║
-╠══════════════════════════════════════╦══════════════════════════════════════╣
-║ ┌── LCD VIRTUAL DISPLAY ────────────┐ ║ ┌── SCAN WITH TABLET CAMERA ────────┐ ║
-║ │ STATUS        ● ONLINE (ATTACHED) │ ║ │   ▄▄▄▄▄▄▄     ▄▄   ▄  ▄ ▄▄▄▄▄▄▄   │ ║
-║ │ RESOLUTION       1920x1200 @ 60Hz │ ║ │   █ ▄▄▄ █ ▀ ██▀▄ █▄█▄▀  █ ▄▄▄ █   │ ║
-║ │ EDGE POSITION    RIGHT OF MAC [R] │ ║ │   █ ███ █ ▄▀▄█ █▄ ██▀▀▄ █ ███ █   │ ║
-║ │ DRIVER      CoreGraphics (Native) │ ║ │   █▄▄▄▄▄█ ▄ █ ▄ █▀▄ ▄▀█ █▄▄▄▄▄█   │ ║
-║ │ CONNECTED             0 Tablet(s) │ ║ │   ▄ ▄ ▄ ▄  ▄ █▀▀▀█▀▀███   ▄  ▄    │ ║
-║ ├── QUICK PAIRING ACCESS ───────────┤ ║ │   █▄ █ ▀▄▀▄██▄▀▀ █▀▄█▄▄█▀▄▄▀▄▄█   │ ║
-║ │ PAIRING PIN         8 4 2 9 1 0   │ ║ │   ▄▄▀  █▄▄▄▀█▄█▀▄▄█▀ ▀▄█▀█▄▀ █▄   │ ║
-║ │ HOST CONSOLE  localhost:4040/host │ ║ │   ▀ █▄█▀▄▄ ████  ▄ ▀▀▀▄▄ █ █▀█▄   │ ║
-║ │ WI-FI IP       192.168.0.170:4040 │ ║ │   ▄▀▄█▀▀▄ ▀█▄████▀▀▄█▀▄  █▀▄ ▄█   │ ║
-║ └───────────────────────────────────┘ ║ └───────────────────────────────────┘ ║
+║ ⚡ EVEDIS LCD MONITOR // HOST SERVER STARTED                     [○ STANDBY] ║
 ╠═════════════════════════════════════════════════════════════════════════════╣
-║ FAST KEYS: [SPACE] Screen  [L/R] Edge  [N] New PIN  [O] Web  [Q] Exit       ║
+║                                                                             ║
+║   ● EVEDIS SERVER STARTED ON LOCALHOST                                      ║
+║     Host controller is active. Create your external display in web console: ║
+║                                                                             ║
+║   HOST WEB CONSOLE:   http://localhost:4040/host                            ║
+║   TABLET CONNECT URL: http://192.168.0.170:4040/client.html?pin=418409      ║
+║   PAIRING PIN:          4 1 8 4 0 9                                         ║
+║                                                                             ║
+║   ┌── DISPLAY & NETWORK STATUS ──────────────────────────────────────────┐  ║
+║   │ VIRTUAL DISPLAY:                  ○ STANDBY (Set up in Web Console) │   ║
+║   │ RESOLUTION:                                  1920x1200 @ 60Hz HiDPI │   ║
+║   │ EDGE POSITION:                                 RIGHT OF PRIMARY [R] │   ║
+║   │ WI-FI INTERFACE:                  Wi-Fi Direct (192.168.0.170:4040) │   ║
+║   │ TABLET CLIENTS:                                         0 Connected │   ║
+║   └─────────────────────────────────────────────────────────────────────┘   ║
+║                                                                             ║
+║   👉 Open http://localhost:4040/host in your browser to create display!     ║
+║                                                                             ║
+╠═════════════════════════════════════════════════════════════════════════════╣
+║  FAST KEYS: [O] Open Web Console  [N] New PIN  [L/R] Edge  [Q] Exit Server  ║
 ╚═════════════════════════════════════════════════════════════════════════════╝
 ```
 
 #### ⌨️ Terminal Fast Keys
 | Key | Action |
 |---|---|
-| `<SPACE>` | **Toggle Display** (Instantly attach or detach the virtual screen) |
-| `<L>` | **Arrange Left** (Position virtual screen to the left edge of your laptop) |
-| `<R>` | **Arrange Right** (Position virtual screen to the right edge of your laptop) |
-| `<N>` | **Rotate Pairing Code** (Generates fresh 6-digit PIN & redraws terminal QR code) |
-| `<O>` | **Open Web Console** (Launches `http://localhost:4040/host` in your browser) |
+| `<O>` | **Open Web Console** (Opens `http://localhost:4040/host` in your default browser) |
+| `<N>` | **Rotate Pairing Code** (Generates fresh 6-digit PIN and updates tablet link) |
+| `<L>` | **Arrange Left** (Positions virtual screen to the left edge of your laptop) |
+| `<R>` | **Arrange Right** (Positions virtual screen to the right edge of your laptop) |
+| `<Q>` / `Ctrl+C` | **Exit Server** (Gracefully shuts down host server) |
 | `<Q>` / `Ctrl+C` | **Clean Detach & Exit** (Gracefully tears down virtual display and exits) |
 
 ---

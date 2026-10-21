@@ -2,6 +2,5 @@
 
 const path = require('path');
 
-// Forward arguments and launch the EVEDIS Host Server with auto-display enabled
-process.env.AUTO_START_VDISPLAY = '1';
+// Launch the EVEDIS Host Server (Virtual display remains in standby until activated via website)
 require(path.join(__dirname, '..', 'server', 'index.js'));
