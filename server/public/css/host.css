@@ -1428,3 +1428,13 @@ h2 {
   box-shadow: 0 0 8px var(--lcd-green);
   animation: blink 1.2s step-start infinite;
 }
+
+@keyframes pulseHighlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(163, 255, 18, 0.7); }
+  70% { transform: scale(1.03); box-shadow: 0 0 0 12px rgba(163, 255, 18, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(163, 255, 18, 0); }
+}
+
+.pulse-highlight {
+  animation: pulseHighlight 1.5s infinite !important;
+}

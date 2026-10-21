@@ -79,6 +79,34 @@ let hudTimeout = null;
 let activeSessionPin = null;
 let firestoreSessionRef = null;
 let isTerminatedHandled = false;
+let pendingIceCandidates = [];
+let wasEverConnected = false;
+
+// Safe ICE candidate buffering
+async function addIceCandidateSafely(candidate) {
+  if (!candidate) return;
+  if (!peerConnection || !peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
+    pendingIceCandidates.push(candidate);
+    return;
+  }
+  try {
+    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (err) {
+    console.warn('[WebRTC Client] addIceCandidate error:', err);
+  }
+}
+
+async function flushPendingIceCandidates() {
+  if (!peerConnection || !peerConnection.remoteDescription) return;
+  while (pendingIceCandidates.length > 0) {
+    const c = pendingIceCandidates.shift();
+    try {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+    } catch (err) {
+      console.warn('[WebRTC Client] flush candidate error:', err);
+    }
+  }
+}
 
 // Display Scale & Pan State
 let currentScale = 1.0;
@@ -287,10 +315,8 @@ async function attemptPairing() {
         snapshot.docChanges().forEach(async change => {
           if (change.type === 'added') {
             const candData = change.doc.data();
-            if (candData.sender === 'host' && peerConnection) {
-              try {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(candData.candidate));
-              } catch (e) {}
+            if (candData.sender === 'host') {
+              await addIceCandidateSafely(candData.candidate);
             }
           }
         });
@@ -365,14 +391,28 @@ fullscreenPrompt.addEventListener('click', async () => {
 // 5. WebRTC Setup
 function setupWebRTC() {
   if (peerConnection) {
-    peerConnection.close();
+    try {
+      peerConnection.close();
+    } catch (e) {}
+    peerConnection = null;
   }
 
+  wasEverConnected = false;
+  pendingIceCandidates = [];
   peerConnection = new RTCPeerConnection(rtcConfig);
 
   peerConnection.ontrack = (event) => {
     console.log('[WebRTC] Received remote stream track:', event.track.kind);
-    remoteVideo.srcObject = event.streams[0];
+    if (event.streams && event.streams[0]) {
+      remoteVideo.srcObject = event.streams[0];
+    } else {
+      let stream = remoteVideo.srcObject;
+      if (!stream || !(stream instanceof MediaStream)) {
+        stream = new MediaStream();
+        remoteVideo.srcObject = stream;
+      }
+      stream.addTrack(event.track);
+    }
     
     // Detect when video track is ended by host
     if (event.track) {
@@ -389,7 +429,9 @@ function setupWebRTC() {
       console.log('[WebRTC] Playout delay set to 0ms (instant render)');
     }
 
-    remoteVideo.play().catch(() => {});
+    remoteVideo.play().catch(e => {
+      console.log('[WebRTC] Autoplay waiting for user interaction:', e);
+    });
   };
 
   peerConnection.onicecandidate = (event) => {
@@ -421,11 +463,17 @@ function setupWebRTC() {
   };
 
   peerConnection.onconnectionstatechange = () => {
-    console.log('[WebRTC] Connection state:', peerConnection.connectionState);
-    if (peerConnection.connectionState === 'connected') {
-      hudStatus.textContent = 'Live (P2P)';
-    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
-      handleHostTerminated('Host connection was closed. Scan the new QR code or enter the 6-digit PIN to reconnect.');
+    const state = peerConnection ? peerConnection.connectionState : 'closed';
+    console.log('[WebRTC] Connection state:', state);
+    if (state === 'connected') {
+      wasEverConnected = true;
+      if (hudStatus) hudStatus.textContent = 'Live (P2P)';
+    } else if (state === 'connecting') {
+      if (hudStatus) hudStatus.textContent = 'Connecting...';
+    } else if (state === 'failed') {
+      if (wasEverConnected) {
+        handleHostTerminated('Host connection failed. Scan the new QR code or enter the 6-digit PIN to reconnect.');
+      }
     }
   };
 }
@@ -436,6 +484,8 @@ async function handleCloudWebRTCOffer(offer) {
   if (!peerConnection) setupWebRTC();
 
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  await flushPendingIceCandidates();
+
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
 
@@ -454,6 +504,8 @@ if (socket) {
     if (!peerConnection) setupWebRTC();
 
     await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    await flushPendingIceCandidates();
+
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
 
@@ -461,11 +513,7 @@ if (socket) {
   });
 
   socket.on('webrtc_ice_candidate', async (candidate) => {
-    if (peerConnection) {
-      try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {}
-    }
+    await addIceCandidateSafely(candidate);
   });
 
   socket.on('quality_state', (quality) => {
@@ -480,9 +528,9 @@ if (socket) {
   });
 
   socket.on('vdisplay_status', (data) => {
-    if (data && data.active === false) {
-      console.log('[Socket] Virtual display is inactive');
-      handleHostTerminated('The host computer ended the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
+    console.log('[Socket] Virtual display status update:', data);
+    if (hudStatus && data) {
+      hudStatus.textContent = data.active ? 'Screen 2 Active' : 'Screen Inactive';
     }
   });
 

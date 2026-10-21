@@ -75,11 +75,38 @@ let currentPosition = 'right';
 let currentPIN = Math.floor(100000 + Math.random() * 900000).toString();
 let detectedLANIP = null;
 let firestoreUnsubscribe = null;
+let hostPendingCandidates = [];
 let currentQuality = {
   resolution: '1080p',
   fps: 60,
   bitrate: 6000
 };
+
+// Safe candidate buffering on host
+async function hostAddCandidateSafely(candidate) {
+  if (!candidate) return;
+  if (!peerConnection || !peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
+    hostPendingCandidates.push(candidate);
+    return;
+  }
+  try {
+    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (err) {
+    console.warn('[Host WebRTC] addIceCandidate error:', err);
+  }
+}
+
+async function hostFlushPendingCandidates() {
+  if (!peerConnection || !peerConnection.remoteDescription) return;
+  while (hostPendingCandidates.length > 0) {
+    const c = hostPendingCandidates.shift();
+    try {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+    } catch (err) {
+      console.warn('[Host WebRTC] flush candidate error:', err);
+    }
+  }
+}
 
 // Computes a reachable URL for external tablets (NEVER localhost!)
 function getReachableTabletURL(pin) {
@@ -231,24 +258,32 @@ async function syncSessionToFirestore(pin) {
 
     // Listen for tablet client connection & answer
     firestoreUnsubscribe = sessionRef.onSnapshot(async (doc) => {
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        updateTabletConnectedUI(false);
+        return;
+      }
       const data = doc.data();
 
       // Tablet connected
-      if (data.clientJoined && !currentClientId) {
-        currentClientId = data.clientUid || 'cloud-tablet';
+      if (data.clientJoined) {
+        if (!currentClientId) {
+          currentClientId = data.clientUid || 'cloud-tablet';
+          showRetroToast('📱 Tablet paired successfully! Ready to stream.');
+        }
         updateTabletConnectedUI(true, 'Cloud WebRTC');
-        showRetroToast('📱 Tablet paired successfully! Ready to stream.');
 
-        if (localStream) {
+        if (localStream && (!peerConnection || peerConnection.signalingState === 'closed')) {
           initiateWebRTC();
         }
+      } else if (data.clientJoined === false || data.clientOnline === false) {
+        updateTabletConnectedUI(false);
       }
 
       // Received WebRTC Answer from tablet
       if (data.webrtc_answer && peerConnection && peerConnection.signalingState === 'have-local-offer') {
         console.log('[Firestore] Received WebRTC answer from tablet client');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.webrtc_answer));
+        await hostFlushPendingCandidates();
       }
 
       // Received real-time quality adaptation from tablet
@@ -263,10 +298,8 @@ async function syncSessionToFirestore(pin) {
       snapshot.docChanges().forEach(async change => {
         if (change.type === 'added') {
           const candData = change.doc.data();
-          if (candData.sender === 'client' && peerConnection) {
-            try {
-              await peerConnection.addIceCandidate(new RTCIceCandidate(candData.candidate));
-            } catch (e) {}
+          if (candData.sender === 'client') {
+            await hostAddCandidateSafely(candData.candidate);
           }
         }
       });
@@ -560,6 +593,14 @@ if (btnStartVDisplay) {
             showRetroToast('✨ Virtual secondary display activated on your system!');
             if (vdisplayCompanionGuide) vdisplayCompanionGuide.style.display = 'none';
             started = true;
+
+            // Highlight Step 2: "Select Screen to Share" so user knows to stream Screen 2
+            if (!localStream && btnStartCapture) {
+              btnStartCapture.classList.add('pulse-highlight');
+              setTimeout(() => {
+                showRetroToast('📡 Virtual Screen 2 created! Now click "Select Screen to Share" below and choose Screen 2 to stream to tablet.', false);
+              }, 400);
+            }
             break;
           }
         }
@@ -817,6 +858,7 @@ if (btnStartCapture) {
       previewPlaceholder.style.display = 'none';
       btnStartCapture.disabled = true;
       btnStopCapture.disabled = false;
+      btnStartCapture.classList.remove('pulse-highlight');
       streamStats.style.display = 'flex';
       hostStatusBadge.textContent = 'Streaming';
       hostStatusBadge.className = 'badge badge-streaming';
@@ -829,10 +871,9 @@ if (btnStartCapture) {
         stopCapture();
       };
 
-      if (currentClientId) {
-        initiateWebRTC();
-      }
-      showRetroToast('🖥️ Screen capture active. Ready to stream!');
+      // Always broadcast WebRTC offer immediately so connected tablet or new tablet pairs without delay
+      await initiateWebRTC();
+      showRetroToast('🖥️ Screen capture active. Streaming to tablet!');
     } catch (err) {
       console.error('Error starting screen capture:', err);
     }
@@ -881,9 +922,13 @@ async function initiateWebRTC() {
 
   console.log('[WebRTC] Creating RTCPeerConnection...');
   if (peerConnection) {
-    peerConnection.close();
+    try {
+      peerConnection.close();
+    } catch (e) {}
+    peerConnection = null;
   }
 
+  hostPendingCandidates = [];
   peerConnection = new RTCPeerConnection(rtcConfig);
 
   localStream.getTracks().forEach(track => {
@@ -912,14 +957,13 @@ async function initiateWebRTC() {
   };
 
   peerConnection.onconnectionstatechange = () => {
-    console.log(`[WebRTC] Connection state: ${peerConnection.connectionState}`);
-    if (peerConnection.connectionState === 'connected') {
-      statClient.textContent = 'Streaming (P2P)';
-      statClient.style.color = '#3fb950';
+    const state = peerConnection ? peerConnection.connectionState : 'closed';
+    console.log(`[WebRTC] Host connection state: ${state}`);
+    if (state === 'connected') {
+      updateTabletConnectedUI(true, 'Streaming (P2P)');
       showRetroToast('🟢 WebRTC peer-to-peer connection active!');
-    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-      statClient.textContent = 'Disconnected';
-      statClient.style.color = '#da3633';
+    } else if (state === 'disconnected' || state === 'failed') {
+      updateTabletConnectedUI(false);
     }
   };
 
@@ -934,23 +978,27 @@ async function initiateWebRTC() {
   });
 
   let sdp = offer.sdp;
-  if (!sdp.includes('a=playout-delay:min=0,max=0')) {
-    sdp = sdp.replace(/(m=video .*\r\n)/, '$1a=playout-delay:min=0,max=0\r\n');
+  try {
+    if (!sdp.includes('a=playout-delay:min=0,max=0')) {
+      sdp = sdp.replace(/(m=video .*\r\n)/, '$1a=playout-delay:min=0,max=0\r\n');
+    }
+    await peerConnection.setLocalDescription({ type: 'offer', sdp });
+  } catch (sdpErr) {
+    console.warn('[WebRTC] Custom SDP setLocalDescription failed, using standard offer:', sdpErr);
+    await peerConnection.setLocalDescription(offer);
   }
-  sdp = sdp.replace(/a=fmtp:(\d+) (.*)/g, 'a=fmtp:$1 $2;x-google-min-bitrate=4000;x-google-max-bitrate=16000;x-google-playout-delay=0/0');
 
-  await peerConnection.setLocalDescription({ type: 'offer', sdp });
-
+  const finalOffer = { type: 'offer', sdp: peerConnection.localDescription.sdp };
   console.log('[WebRTC] Dispatching offer to tablet...');
   if (socket && socket.connected) {
-    socket.emit('webrtc_offer', { type: 'offer', sdp });
+    socket.emit('webrtc_offer', finalOffer);
   }
 
   // Sync offer to Firestore so cloud tablet receives it
   if (typeof firebase !== 'undefined' && firebase.firestore && window.__IS_FIREBASE_CONFIGURED__) {
     const db = firebase.firestore();
     db.collection('sessions').doc(currentPIN).update({
-      webrtc_offer: { type: 'offer', sdp }
+      webrtc_offer: finalOffer
     }).catch(e => console.warn(e));
   }
 }
@@ -978,12 +1026,12 @@ if (socket) {
     }
   });
 
-  socket.on('client_connected', ({ clientId }) => {
+  socket.on('client_connected', (data) => {
+    const clientId = data ? data.clientId : 'client';
     console.log('[Socket] Client joined via local Wi-Fi:', clientId);
     currentClientId = clientId;
-    clientConnectionBadge.innerHTML = '<span class="dot dot-connected"></span> Android Tablet Connected';
-    clientConnectionBadge.style.color = '#3fb950';
-    statClient.textContent = 'Connected (Local Wi-Fi)';
+    updateTabletConnectedUI(true, 'Local Wi-Fi');
+    showRetroToast('📱 Tablet paired successfully! Ready to stream.');
 
     if (localStream) {
       initiateWebRTC();
@@ -991,24 +1039,21 @@ if (socket) {
   });
 
   socket.on('client_disconnected', () => {
+    console.log('[Socket] Client disconnected');
     currentClientId = null;
-    clientConnectionBadge.innerHTML = '<span class="dot dot-waiting"></span> Waiting for tablet to join Wi-Fi...';
-    clientConnectionBadge.style.color = 'var(--text-muted)';
-    statClient.textContent = 'Disconnected';
+    updateTabletConnectedUI(false);
   });
 
   socket.on('webrtc_answer', async (answer) => {
+    console.log('[Socket] Received WebRTC answer from tablet');
     if (peerConnection) {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      await hostFlushPendingCandidates();
     }
   });
 
   socket.on('webrtc_ice_candidate', async (candidate) => {
-    if (peerConnection) {
-      try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {}
-    }
+    await hostAddCandidateSafely(candidate);
   });
 
   socket.on('apply_quality', (quality) => {
@@ -1021,6 +1066,24 @@ if (socket) {
     applyStreamQuality(quality, false);
   });
 }
+
+// Periodic heartbeat to keep tablet link status and virtual display state updated regularly
+setInterval(async () => {
+  if (peerConnection && peerConnection.connectionState === 'connected') {
+    updateTabletConnectedUI(true, 'Streaming (P2P)');
+    return;
+  }
+  try {
+    const res = await fetch(isLocalOrigin ? '/api/status' : 'http://localhost:4040/api/status', { signal: AbortSignal.timeout(1500) });
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.connectedClients === 'number') {
+        const isConnected = data.connectedClients > 0 || (peerConnection && peerConnection.connectionState === 'connected');
+        updateTabletConnectedUI(isConnected, isConnected ? 'Local Wi-Fi' : 'Android Tablet');
+      }
+    }
+  } catch (e) {}
+}, 2500);
 
 // Load status and initialize immediately (handles both pre- and post-DOMContentLoaded states)
 if (document.readyState === 'loading') {

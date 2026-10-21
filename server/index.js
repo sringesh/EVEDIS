@@ -654,7 +654,8 @@ app.get('/api/status', async (req, res) => {
     vDisplay: vDisplayInfo,
     position: currentPosition,
     quality: currentQuality,
-    platform: process.platform
+    platform: process.platform,
+    connectedClients: clientSockets.size
   });
 });
 
@@ -712,6 +713,9 @@ io.on('connection', (socket) => {
     }
     socket.emit('vdisplay_status', { active: !!vDisplayProcess, info: vDisplayInfo });
     socket.emit('quality_state', currentQuality);
+    if (clientSockets.size > 0) {
+      socket.emit('client_connected', { clientId: Array.from(clientSockets)[0].id, count: clientSockets.size });
+    }
   });
 
   socket.on('host_closing', () => {
@@ -739,9 +743,8 @@ io.on('connection', (socket) => {
         callback({ success: true, message: 'Connected' });
       }
       if (hostSocket) {
-        hostSocket.emit('client_connected', { clientId: socket.id });
+        hostSocket.emit('client_connected', { clientId: socket.id, count: clientSockets.size });
       }
-      await refreshPairingCode();
       renderTerminalDashboard();
     } else {
       if (typeof callback === 'function') {
