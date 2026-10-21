@@ -11,6 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Fullscreen Animated Matrix Digital Rain Background -->
+  <canvas id="bgMatrixCanvas" class="fullscreen-matrix-bg"></canvas>
+
   <div class="app-container">
     <!-- Header -->
     <header class="header">
@@ -21,6 +24,7 @@
         </div>
       </div>
       <div class="header-status" style="display: flex; align-items: center; gap: 12px;">
+        <a href="/" class="btn btn-secondary btn-xs" style="text-decoration: none; padding: 5px 10px;">🏠 Portal Home</a>
         <div class="user-auth-indicator" id="userAuthIndicator" style="display: none; align-items: center; gap: 8px;">
           <img id="hostUserAvatar" src="" style="width: 28px; height: 28px; border-radius: 50%;" />
           <span id="hostUserEmail" style="font-size: 12px; color: var(--text-muted);"></span>
@@ -274,6 +278,106 @@
         </div>
       </section>
     </div>
+
+    <!-- About the Creator Dossier Section -->
+    <section class="creator-dossier-section" id="creatorDossier">
+      <div class="dossier-console bracket-box">
+        <div class="dossier-console-inner">
+          
+          <!-- Column 1: About the Creator & Portrait -->
+          <div class="dossier-profile-card">
+            <div class="dossier-card-header">
+              <span class="retro-indicator"></span>
+              <span>ABOUT THE CREATOR // SRINGESH V.</span>
+            </div>
+
+            <!-- Creator Photo & Intro Row -->
+            <div class="creator-bio-top-row">
+              <div class="creator-photo-frame">
+                <img src="assets/sringesh.png" alt="Sringesh V." class="creator-portrait-img" />
+              </div>
+              <div class="creator-header-intro">
+                <span class="terminal-callsign">[ CREATOR &amp; BUILDER ]</span>
+                <h3 class="creator-dossier-name">SRINGESH V.</h3>
+                <p class="creator-sub-quote">"Curious by nature. Driven by ideas. Always building what's next."</p>
+              </div>
+            </div>
+
+            <!-- Full Authentic Story as Requested -->
+            <div class="creator-full-story">
+              <p class="story-lead">
+                <strong>Hey, I'm Sringesh — an engineering student, tech enthusiast, and builder of ideas.</strong>
+              </p>
+              <p>
+                I enjoy exploring the world of technology, experimenting with new concepts, and turning simple ideas into meaningful digital experiences.
+              </p>
+              <p>
+                <strong>EVEDIS</strong> was created from my interest in making technology more seamless and accessible, with a focus on simplifying the wireless display experience. I believe the best innovations don't always have to be complicated — sometimes, a simple idea can make a real difference.
+              </p>
+              <p>
+                For me, building EVEDIS is more than just creating a website. It's about learning, experimenting, solving problems, and bringing an idea to life.
+              </p>
+              <div class="creator-signoff">
+                <span class="signoff-quote"><em>Curious by nature. Driven by ideas. Always building what's next.</em></span>
+                <span class="signoff-name">— <strong>Sringesh V.</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Social Network & Transmission Hub -->
+          <div class="dossier-social-card">
+            <div class="dossier-card-header">
+              <span>// TRANSMISSION CHANNELS &amp; SOCIAL NETWORK</span>
+              <span class="pulse-beacon"></span>
+            </div>
+
+            <p class="social-lead-text">
+              Direct telemetry feeds, open-source repositories, and professional networking links. Connect directly with the creator:
+            </p>
+
+            <div class="social-channels-stack">
+              <a href="https://github.com/sringesh/EVEDIS" target="_blank" rel="noopener" class="social-channel-btn">
+                <div class="channel-btn-icon">⚡</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">GITHUB</span>
+                  <span class="channel-desc">Source Code, Core Driver &amp; Open Source Repos</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+
+              <a href="https://x.com/SR1GESH" target="_blank" rel="noopener" class="social-channel-btn">
+                <div class="channel-btn-icon">📡</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">X / TWITTER</span>
+                  <span class="channel-desc">@SR1GESH &bull; Updates, Demos &amp; Insights</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+
+              <a href="mailto:reachsringesh@gmail.com" class="social-channel-btn">
+                <div class="channel-btn-icon">✉️</div>
+                <div class="channel-btn-info">
+                  <span class="channel-title">EMAIL DIRECT</span>
+                  <span class="channel-desc">reachsringesh@gmail.com</span>
+                </div>
+                <span class="channel-arrow">→</span>
+              </a>
+            </div>
+
+            <div class="dossier-security-badge">
+              <span>🔒 ENCRYPTED END-TO-END // FIREBASE CLOUD VERIFIED</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Retro Footer -->
+    <footer class="retro-footer">
+      <div>EVEDIS PROTOCOL // ALL CHANNELS SECURED</div>
+      <div>[ 2026 ] EVEDIS WIRELESS MATRIX PROTOCOL</div>
+    </footer>
   </div>
 
   <script src="js/socket.io.min.js"></script>
@@ -306,6 +410,54 @@
           }
         });
       }
+    })();
+
+    // Fullscreen Animated Matrix Digital Rain Background for Host
+    (function() {
+      const canvas = document.getElementById('bgMatrixCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const chars = '0123456789ABCDEFｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜEVEDIS';
+      const fontSize = 15;
+      let columns = 0;
+      let drops = [];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.floor(canvas.width / fontSize) || 30;
+        drops = [];
+        for (let i = 0; i < columns; i++) {
+          drops[i] = Math.floor(Math.random() * -60);
+        }
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      function drawMatrix() {
+        ctx.fillStyle = 'rgba(4, 8, 5, 0.085)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = `${fontSize}px 'VT323', monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+          const char = chars[Math.floor(Math.random() * chars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+
+          ctx.fillStyle = (Math.random() > 0.88) ? '#ecfae8' : '#a3ff12';
+          ctx.fillText(char, x, y);
+
+          if (y > canvas.height && Math.random() > 0.98) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+
+      setInterval(drawMatrix, 42);
     })();
   </script>
   <script src="js/host.js"></script>

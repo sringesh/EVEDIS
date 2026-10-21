@@ -14,6 +14,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body class="fullscreen-mode">
+  <!-- Fullscreen Animated Matrix Digital Rain Background -->
+  <canvas id="bgMatrixCanvas" class="fullscreen-matrix-bg"></canvas>
 
   <!-- Connect / PIN Entry Screen (Shown if not paired) -->
   <div id="pairingScreen" class="pairing-container">
@@ -177,6 +179,53 @@
           }
         });
       }
+    })();
+    // Fullscreen Animated Matrix Digital Rain Background for Client Pairing Screen
+    (function() {
+      const canvas = document.getElementById('bgMatrixCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const chars = '0123456789ABCDEFｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜEVEDIS';
+      const fontSize = 15;
+      let columns = 0;
+      let drops = [];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.floor(canvas.width / fontSize) || 30;
+        drops = [];
+        for (let i = 0; i < columns; i++) {
+          drops[i] = Math.floor(Math.random() * -60);
+        }
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      function drawMatrix() {
+        ctx.fillStyle = 'rgba(4, 8, 5, 0.085)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = `${fontSize}px 'VT323', monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+          const char = chars[Math.floor(Math.random() * chars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+
+          ctx.fillStyle = (Math.random() > 0.88) ? '#ecfae8' : '#a3ff12';
+          ctx.fillText(char, x, y);
+
+          if (y > canvas.height && Math.random() > 0.98) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+
+      setInterval(drawMatrix, 42);
     })();
   </script>
   <script src="js/client.js"></script>

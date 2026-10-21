@@ -64,12 +64,32 @@ let peerConnection = null;
 let currentClientId = null;
 let currentPosition = 'right';
 let currentPIN = Math.floor(100000 + Math.random() * 900000).toString();
+let detectedLANIP = null;
 let firestoreUnsubscribe = null;
 let currentQuality = {
   resolution: '1080p',
   fps: 60,
   bitrate: 6000
 };
+
+// Computes a reachable URL for external tablets (NEVER localhost!)
+function getReachableTabletURL(pin) {
+  // 1. If we detected the host Mac's Wi-Fi IP (e.g. 192.168.0.170), use it for ultra-low latency direct LAN stream!
+  if (detectedLANIP && detectedLANIP !== '127.0.0.1' && !detectedLANIP.includes('localhost')) {
+    const port = window.location.port || 4040;
+    return `http://${detectedLANIP}:${port}/client.html?pin=${pin}`;
+  }
+
+  // 2. If running on public domain (e.g. https://evedis.web.app), use it!
+  if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+    return `${window.location.origin}/client.html?pin=${pin}`;
+  }
+
+  // 3. Fallback when on localhost before /api/status responds:
+  // Use universal cloud URL so tablet connects over WebRTC Firestore signaling.
+  // Tablets can NEVER open http://localhost, so localhost must never be sent to the tablet.
+  return `https://evedis.web.app/client.html?pin=${pin}`;
+}
 
 const rtcConfig = {
   iceServers: [
@@ -146,7 +166,7 @@ function generateAndDisplayPairingInfo(customPin = null) {
     currentPIN = Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  const tabletURL = `${window.location.origin}/client.html?pin=${currentPIN}`;
+  const tabletURL = getReachableTabletURL(currentPIN);
 
   // Update all PIN elements (Top Radar + Step 3 Card)
   document.querySelectorAll('.pin-digits-target').forEach(el => {
@@ -256,6 +276,10 @@ async function loadStatus() {
       const res = await fetch(url, { signal: AbortSignal.timeout(1500) });
       if (res.ok) {
         const data = await res.json();
+        if (data.localIP && data.localIP !== '127.0.0.1') {
+          detectedLANIP = data.localIP;
+          generateAndDisplayPairingInfo(currentPIN);
+        }
         if (data.vDisplay && data.vDisplay.status === 'active') {
           updateVDisplayUI(true, data.vDisplay);
         }
@@ -645,6 +669,22 @@ if (socket) {
   socket.on('connect', () => {
     console.log('[Socket] Connected to local host backend');
     socket.emit('register_host');
+  });
+
+  socket.on('pin_updated', (data) => {
+    if (data.tabletURL) {
+      if (data.pin) currentPIN = data.pin;
+      document.querySelectorAll('.pin-digits-target').forEach(el => el.textContent = currentPIN);
+      if (pinDisplay) pinDisplay.textContent = currentPIN;
+      if (radarPinDisplay) radarPinDisplay.textContent = currentPIN;
+      if (tabletUrlInput) tabletUrlInput.value = data.tabletURL;
+      if (radarTabletUrlInput) radarTabletUrlInput.value = data.tabletURL;
+      if (data.qrCode) {
+        if (qrCodeImg) qrCodeImg.src = data.qrCode;
+        if (radarQrThumb) radarQrThumb.src = data.qrCode;
+        if (qrModalImg) qrModalImg.src = data.qrCode;
+      }
+    }
   });
 
   socket.on('client_connected', ({ clientId }) => {

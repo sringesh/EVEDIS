@@ -47,6 +47,24 @@ html, body {
   color: var(--lcd-text);
   font-family: var(--font-mono);
   touch-action: none;
+  position: relative;
+}
+
+/* Fullscreen Animated Matrix Digital Rain Background for Pairing Screen */
+.fullscreen-matrix-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.38;
+}
+
+.pairing-container {
+  position: relative;
+  z-index: 1;
 }
 
 /* ===============================================================
