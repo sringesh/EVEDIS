@@ -124,12 +124,19 @@ h1 {
   padding: 14px 20px;
   margin-bottom: 24px;
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto auto 1fr auto;
   gap: 20px;
   align-items: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
+  .pairing-radar-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 650px) {
   .pairing-radar-strip {
     grid-template-columns: 1fr;
     gap: 14px;
@@ -153,7 +160,7 @@ h1 {
 .radar-pin-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .radar-pin-box {
@@ -165,6 +172,40 @@ h1 {
   background: var(--lcd-bg-elevated);
   padding: 4px 14px;
   border: 1px solid var(--lcd-border);
+}
+
+.radar-qr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.radar-qr-box {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border: 1px solid var(--lcd-border-bright);
+  padding: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(163, 255, 18, 0.2);
+}
+
+.radar-qr-box:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 16px var(--lcd-green-glow);
+  border-color: var(--lcd-green);
+}
+
+.radar-qr-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .radar-url-row {
@@ -181,7 +222,7 @@ h1 {
   font-size: 12px;
   font-family: var(--font-mono);
   outline: none;
-  min-width: 260px;
+  min-width: 220px;
   width: 100%;
 }
 
@@ -195,6 +236,7 @@ h1 {
   border: 1px solid var(--lcd-border);
   padding: 8px 14px;
   color: var(--lcd-amber);
+  white-space: nowrap;
 }
 
 .radar-status-badge.connected {
@@ -202,30 +244,107 @@ h1 {
   border-color: var(--lcd-green);
 }
 
-.radar-qr-thumb-wrap {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  background: #fff;
-  border: 1px solid var(--lcd-green);
-  padding: 3px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
+/* High-Res QR Modal */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.qr-modal-card {
+  background: var(--lcd-bg-surface);
+  border: 2px solid var(--lcd-border-bright);
+  box-shadow: 0 0 35px rgba(163, 255, 18, 0.35);
+  padding: 24px;
+  max-width: 360px;
+  width: 90%;
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.qr-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--lcd-border);
+  padding-bottom: 12px;
+}
+
+.qr-modal-header h3 {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: var(--lcd-green);
+  letter-spacing: 0.5px;
+}
+
+.qr-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--lcd-green);
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.qr-modal-close:hover {
+  transform: scale(1.2);
+}
+
+.qr-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.qr-modal-frame {
+  background: #fff;
+  border: 3px solid var(--lcd-green);
+  padding: 12px;
+  box-shadow: 0 0 25px rgba(163, 255, 18, 0.3);
+  display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.radar-qr-thumb-wrap:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 15px var(--lcd-green-glow);
+.qr-modal-frame img {
+  width: 220px;
+  height: 220px;
+  display: block;
 }
 
-.radar-qr-thumb {
+.qr-modal-pin-box {
+  background: var(--lcd-bg-elevated);
+  border: 1px solid var(--lcd-border);
+  padding: 8px 18px;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+}
+
+.qr-modal-pin {
+  font-family: var(--font-pixel);
+  font-size: 26px;
+  letter-spacing: 5px;
+  color: var(--lcd-green);
+  text-shadow: 0 0 12px var(--lcd-green-glow);
+  margin-top: 4px;
+}
+
+.qr-modal-subtext {
+  font-size: 11px;
+  color: var(--lcd-text-muted);
+  line-height: 1.4;
 }
 
 .btn-xs {

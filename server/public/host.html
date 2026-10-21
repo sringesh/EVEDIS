@@ -31,6 +31,7 @@
 
     <!-- Top Tablet Pairing Radar (Always Visible Above Fold) -->
     <div class="pairing-radar-strip" id="pairingRadarStrip">
+      <!-- 1. Pairing PIN -->
       <div class="radar-col radar-pin-col">
         <span class="radar-label">⚡ TABLET PAIRING PIN</span>
         <div class="radar-pin-row">
@@ -39,6 +40,18 @@
         </div>
       </div>
 
+      <!-- 2. QR Code (Positioned cleanly right beside the PIN) -->
+      <div class="radar-col radar-qr-col">
+        <span class="radar-label">📷 SCAN QR CODE</span>
+        <div class="radar-qr-row">
+          <div class="radar-qr-box" id="radarQrThumbWrap" title="Click to enlarge QR code">
+            <img id="radarQrThumb" class="radar-qr-thumb" alt="QR" />
+          </div>
+          <button id="btnOpenQrModal" class="btn btn-secondary btn-xs" title="Open large QR code for camera">🔍 Enlarge</button>
+        </div>
+      </div>
+
+      <!-- 3. Tablet Connect URL -->
       <div class="radar-col radar-url-col">
         <span class="radar-label">🌐 TABLET CONNECT URL</span>
         <div class="radar-url-row">
@@ -47,6 +60,7 @@
         </div>
       </div>
 
+      <!-- 4. Tablet Status -->
       <div class="radar-col radar-status-col">
         <span class="radar-label">📱 TABLET LINK STATUS</span>
         <div class="radar-status-badge" id="radarStatusBadge">
@@ -54,11 +68,27 @@
           <span id="radarStatusText">Waiting for tablet...</span>
         </div>
       </div>
+    </div>
 
-      <div class="radar-col radar-qr-preview-col">
-        <div class="radar-qr-thumb-wrap" id="radarQrThumbWrap" title="Click to jump to QR code">
-          <img id="radarQrThumb" class="radar-qr-thumb" alt="QR" />
-          <span class="radar-qr-hint">QR CODE</span>
+    <!-- High-Resolution Retro QR Modal -->
+    <div id="qrModal" class="qr-modal-overlay" style="display: none;">
+      <div class="qr-modal-card">
+        <div class="qr-modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="icon">📷</span>
+            <h3>Scan with Android Tablet</h3>
+          </div>
+          <button id="btnCloseQrModal" class="qr-modal-close" title="Close">✕</button>
+        </div>
+        <div class="qr-modal-body">
+          <div class="qr-modal-frame">
+            <img id="qrModalImg" alt="QR Code" />
+          </div>
+          <div class="qr-modal-pin-box">
+            <span class="radar-label">PAIRING PIN</span>
+            <div class="pin-digits-target qr-modal-pin">------</div>
+          </div>
+          <p class="qr-modal-subtext">Point your tablet camera or browser at this QR code to connect immediately.</p>
         </div>
       </div>
     </div>

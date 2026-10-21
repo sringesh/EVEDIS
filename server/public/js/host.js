@@ -47,6 +47,10 @@ const radarStatusText = document.getElementById('radarStatusText');
 const radarDot = document.getElementById('radarDot');
 const radarQrThumb = document.getElementById('radarQrThumb');
 const radarQrThumbWrap = document.getElementById('radarQrThumbWrap');
+const btnOpenQrModal = document.getElementById('btnOpenQrModal');
+const btnCloseQrModal = document.getElementById('btnCloseQrModal');
+const qrModal = document.getElementById('qrModal');
+const qrModalImg = document.getElementById('qrModalImg');
 
 // Companion Guide Elements
 const vdisplayCompanionGuide = document.getElementById('vdisplayCompanionGuide');
@@ -163,10 +167,12 @@ function generateAndDisplayPairingInfo(customPin = null) {
       const finalUrl = (!err && url) ? url : fallbackQrUrl;
       if (qrCodeImg) qrCodeImg.src = finalUrl;
       if (radarQrThumb) radarQrThumb.src = finalUrl;
+      if (qrModalImg) qrModalImg.src = finalUrl;
     });
   } else {
     if (qrCodeImg) qrCodeImg.src = fallbackQrUrl;
     if (radarQrThumb) radarQrThumb.src = fallbackQrUrl;
+    if (qrModalImg) qrModalImg.src = fallbackQrUrl;
   }
 
   // Sync to Cloud Firestore for global cloud signaling
@@ -427,12 +433,25 @@ if (btnRadarRefreshPin) {
   });
 }
 
-if (radarQrThumbWrap) {
-  radarQrThumbWrap.addEventListener('click', () => {
-    const step3 = document.querySelector('.card-wide');
-    if (step3) step3.scrollIntoView({ behavior: 'smooth' });
+function openQrModal() {
+  if (qrModal) qrModal.style.display = 'flex';
+}
+
+function closeQrModal() {
+  if (qrModal) qrModal.style.display = 'none';
+}
+
+if (btnOpenQrModal) btnOpenQrModal.addEventListener('click', openQrModal);
+if (radarQrThumbWrap) radarQrThumbWrap.addEventListener('click', openQrModal);
+if (btnCloseQrModal) btnCloseQrModal.addEventListener('click', closeQrModal);
+if (qrModal) {
+  qrModal.addEventListener('click', (e) => {
+    if (e.target === qrModal) closeQrModal();
   });
 }
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeQrModal();
+});
 
 if (btnStopVDisplay) {
   btnStopVDisplay.addEventListener('click', async () => {
