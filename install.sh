@@ -37,8 +37,11 @@ echo "📦 Installing dependencies..."
 npm install
 cd server && npm install && cd ..
 
-chmod +x start.sh start.command 2>/dev/null || true
+chmod +x start.sh start.command evedis bin/evedis.js 2>/dev/null || true
+
+# Optional global link so user can just type 'evedis' from any terminal
+npm link 2>/dev/null || true
 
 echo "✨ Installation complete!"
 echo "🚀 Launching EVEDIS Host..."
-./start.sh
+./evedis

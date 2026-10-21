@@ -1,6 +1,6 @@
 {
   "name": "evedis",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "EVEDIS: Open-Source Wireless Extended Secondary Display System for Mac, PC & Tablets",
   "author": "Sringesh V. <reachsringesh@gmail.com> (https://x.com/SR1GESH)",
   "license": "MIT",
@@ -10,8 +10,13 @@
     "url": "https://github.com/sringesh/EVEDIS.git"
   },
   "main": "server/index.js",
+  "bin": {
+    "evedis": "./bin/evedis.js"
+  },
   "scripts": {
+    "evedis": "node server/index.js",
     "start": "node server/index.js",
+    "start:open": "node server/index.js --open",
     "postinstall": "cd server && npm install",
     "build:mac": "clang -framework CoreGraphics -framework Foundation macos-virtual-display/evedis_vdisplay.m -o macos-virtual-display/evedis-vdisplay",
     "deploy:firebase": "npx firebase-tools deploy --only hosting,firestore"

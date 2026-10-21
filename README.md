@@ -12,12 +12,57 @@ Unlike basic screen mirroring, EVEDIS creates a **genuine independent secondary 
 
 ---
 
-## ⚡ Quick Start (Run Locally in 1 Command)
+## ⚡ Fast Start: The Single Command (Auto-Host + Auto-Display)
 
-Running EVEDIS locally gives you **full native OS hardware display privileges** with zero browser sandbox restrictions!
+EVEDIS now includes a **single fast key command** that automatically starts the host server, **immediately creates your macOS extended virtual monitor**, renders a Claude-style animated startup banner, and brings up a **retro LCD control monitor directly in your terminal** with an interactive scannable QR code!
 
-### 🍎 macOS (1-Line Terminal Install)
-Open Terminal and run:
+```bash
+# In the cloned repo:
+./evedis
+
+# Or if installed globally (npm link):
+evedis
+```
+
+### 📺 Interactive Terminal LCD Monitor & Fast Keys
+When you launch EVEDIS in your terminal, an interactive retro LCD dashboard boots up:
+* **Real Scannable QR Code**: Point your tablet's camera directly at your laptop's terminal to connect instantly!
+* **Dynamic Pairing PIN**: Displayed in high-visibility segmented digital characters.
+* **Live Telemetry**: Real-time display state (`ONLINE / ATTACHED`), resolution (`1920x1200 @ 60Hz`), edge arrangement, and connected tablets.
+
+```
+╔═════════════════════════════════════════════════════════════════════════════╗
+║ ⚡ EVEDIS LCD MONITOR // VIRTUAL DISPLAY MATRIX                   [● ACTIVE] ║
+╠══════════════════════════════════════╦══════════════════════════════════════╣
+║ ┌── LCD VIRTUAL DISPLAY ────────────┐ ║ ┌── SCAN WITH TABLET CAMERA ────────┐ ║
+║ │ STATUS        ● ONLINE (ATTACHED) │ ║ │   ▄▄▄▄▄▄▄     ▄▄   ▄  ▄ ▄▄▄▄▄▄▄   │ ║
+║ │ RESOLUTION       1920x1200 @ 60Hz │ ║ │   █ ▄▄▄ █ ▀ ██▀▄ █▄█▄▀  █ ▄▄▄ █   │ ║
+║ │ EDGE POSITION    RIGHT OF MAC [R] │ ║ │   █ ███ █ ▄▀▄█ █▄ ██▀▀▄ █ ███ █   │ ║
+║ │ DRIVER      CoreGraphics (Native) │ ║ │   █▄▄▄▄▄█ ▄ █ ▄ █▀▄ ▄▀█ █▄▄▄▄▄█   │ ║
+║ │ CONNECTED             0 Tablet(s) │ ║ │   ▄ ▄ ▄ ▄  ▄ █▀▀▀█▀▀███   ▄  ▄    │ ║
+║ ├── QUICK PAIRING ACCESS ───────────┤ ║ │   █▄ █ ▀▄▀▄██▄▀▀ █▀▄█▄▄█▀▄▄▀▄▄█   │ ║
+║ │ PAIRING PIN         8 4 2 9 1 0   │ ║ │   ▄▄▀  █▄▄▄▀█▄█▀▄▄█▀ ▀▄█▀█▄▀ █▄   │ ║
+║ │ HOST CONSOLE  localhost:4040/host │ ║ │   ▀ █▄█▀▄▄ ████  ▄ ▀▀▀▄▄ █ █▀█▄   │ ║
+║ │ WI-FI IP       192.168.0.170:4040 │ ║ │   ▄▀▄█▀▀▄ ▀█▄████▀▀▄█▀▄  █▀▄ ▄█   │ ║
+║ └───────────────────────────────────┘ ║ └───────────────────────────────────┘ ║
+╠═════════════════════════════════════════════════════════════════════════════╣
+║ FAST KEYS: [SPACE] Screen  [L/R] Edge  [N] New PIN  [O] Web  [Q] Exit       ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+```
+
+#### ⌨️ Terminal Fast Keys
+| Key | Action |
+|---|---|
+| `<SPACE>` | **Toggle Display** (Instantly attach or detach the virtual screen) |
+| `<L>` | **Arrange Left** (Position virtual screen to the left edge of your laptop) |
+| `<R>` | **Arrange Right** (Position virtual screen to the right edge of your laptop) |
+| `<N>` | **Rotate Pairing Code** (Generates fresh 6-digit PIN & redraws terminal QR code) |
+| `<O>` | **Open Web Console** (Launches `http://localhost:4040/host` in your browser) |
+| `<Q>` / `Ctrl+C` | **Clean Detach & Exit** (Gracefully tears down virtual display and exits) |
+
+---
+
+### 🍎 1-Line Terminal Install (macOS)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sringesh/EVEDIS/main/install.sh | bash
 ```
@@ -26,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/sringesh/EVEDIS/main/install.sh | b
 ```bash
 git clone https://github.com/sringesh/EVEDIS.git
 cd evedis
-./start.sh
+./evedis
 ```
 > **Tip for Mac Users:** You can also just double-click **`start.command`** in Finder to launch EVEDIS instantly!
 

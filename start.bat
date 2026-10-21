@@ -13,8 +13,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [OK] Node.js is detected!
-
 if not exist node_modules (
     echo [INFO] Installing EVEDIS dependencies...
     call npm install
@@ -23,11 +21,6 @@ if not exist node_modules (
     cd ..
 )
 
-echo [INFO] Opening EVEDIS Host Controller in your browser...
-start "" http://localhost:4040/host
-
-echo [INFO] Starting server on http://localhost:4040...
-echo Press Ctrl+C to stop the server at any time.
-echo.
-node server/index.js
+echo [INFO] Starting EVEDIS with Terminal LCD Dashboard...
+node server\index.js %*
 pause

@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# Resolve repository root
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR"
+
+# Check if node is installed
+if ! command -v node >/dev/null 2>&1; then
+  echo "❌ Error: Node.js is required. Install from https://nodejs.org or run 'brew install node'"
+  exit 1
+fi
+
+# Ensure node_modules exist
+if [ ! -d "node_modules" ] || [ ! -d "server/node_modules" ]; then
+  echo "📦 Installing EVEDIS dependencies..."
+  npm install
+  cd server && npm install && cd ..
+fi
+
+# Ensure macOS virtual display driver binary is built
+if [ "$(uname -s)" = "Darwin" ]; then
+  if [ ! -f "macos-virtual-display/evedis-vdisplay" ]; then
+    echo "⚙️ Compiling macOS Virtual Display Driver..."
+    clang -framework CoreGraphics -framework Foundation macos-virtual-display/evedis_vdisplay.m -o macos-virtual-display/evedis-vdisplay
+    chmod +x macos-virtual-display/evedis-vdisplay
+  fi
+fi
+
+# Run EVEDIS with auto-virtual display and terminal LCD dashboard
+exec node "$DIR/server/index.js" "$@"
