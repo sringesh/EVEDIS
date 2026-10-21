@@ -23,7 +23,13 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static assets with clean URLs (.html extension optional)
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html', 'htm'] }));
+
+// Explicit Clean URL Routes for Host, Client, and Admin
+app.get('/host', (req, res) => res.sendFile(path.join(__dirname, 'public', 'host.html')));
+app.get('/client', (req, res) => res.sendFile(path.join(__dirname, 'public', 'client.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 // Helper to get local IPv4 address on LAN
 function getLocalIP() {
