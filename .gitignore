@@ -1,24 +1,64 @@
-# Dependencies
+# ==========================================
+# EVEDIS .gitignore
+# ==========================================
+
+# 1. Dependencies (never commit node_modules)
 node_modules/
 server/node_modules/
+package-lock.json.bak
 
-# OS metadata
+# 2. Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*serviceAccount*.json
+
+# 3. Operating System Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Firebase local cache
+# 4. Firebase CLI & Deployment Caches
 .firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
-# Logs
+# 5. Logs & Temporary Files
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+tmp/
+temp/
+.cache/
 
-# Android build outputs
+# 6. IDEs & Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# 7. Android Build Outputs & Local SDK Paths
 android/app/build/
 android/.gradle/
 android/local.properties
 android/.idea/
 android/*.iml
 android/build/
+android/captures/
+.externalNativeBuild/
+.cxx/
