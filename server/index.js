@@ -15,6 +15,79 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 4040;
+const cliArg = (process.argv[2] || '').toLowerCase();
+
+// -------------------------------------------------------------
+// FAST CLI SHORTCUTS (ed, td, pd, stop, terminate, kill, shortcuts)
+// -------------------------------------------------------------
+if (['td', 'pd', 'stop', 'terminate', 'off'].includes(cliArg)) {
+  console.log('\x1b[33m🛑 Terminating EVEDIS Virtual Display and restoring windows...\x1b[0m');
+  
+  // 1. Notify server if running
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: PORT,
+    path: '/api/vdisplay/terminate',
+    method: 'POST',
+    timeout: 800
+  }, () => {});
+  req.on('error', () => {});
+  req.end();
+
+  // 2. Kill driver process directly if running on macOS
+  if (process.platform === 'darwin') {
+    const { execSync } = require('child_process');
+    try { execSync('pkill -f evedis-vdisplay 2>/dev/null || true'); } catch (e) {}
+    try {
+      execSync(`
+if pgrep -x "Google Chrome" >/dev/null 2>&1; then
+  osascript -e 'tell application "Google Chrome" to repeat with w in windows
+    try
+      set b to bounds of w
+      set x1 to item 1 of b
+      set y1 to item 2 of b
+      set x2 to item 3 of b
+      set y2 to item 4 of b
+      set wWidth to x2 - x1
+      set wHeight to y2 - y1
+      if x1 >= 1700 or x1 < 0 then
+        set bounds of w to {60, 60, 60 + wWidth, 60 + wHeight}
+      end if
+    end try
+  end repeat' 2>/dev/null || true
+fi
+`);
+    } catch (e) {}
+  }
+
+  console.log('\x1b[32m✔ EVEDIS Virtual Display terminated. All windows gathered back to Screen 1.\x1b[0m');
+  process.exit(0);
+}
+
+if (['kill', 'down'].includes(cliArg)) {
+  console.log('\x1b[33m🛑 Shutting down EVEDIS server and virtual displays...\x1b[0m');
+  if (process.platform === 'darwin') {
+    const { execSync } = require('child_process');
+    try { execSync('pkill -f evedis-vdisplay 2>/dev/null || true'); } catch (e) {}
+    try { execSync(`lsof -ti :${PORT} | xargs kill -9 2>/dev/null || true`); } catch (e) {}
+  }
+  console.log('\x1b[32m✔ EVEDIS fully shut down. All windows restored to Screen 1.\x1b[0m');
+  process.exit(0);
+}
+
+if (['shortcuts', 'alias', 'aliases'].includes(cliArg)) {
+  const scriptPath = path.resolve(__dirname, '..', 'evedis');
+  console.log('\x1b[36m⚡ EVEDIS Fast Command Shortcuts for your shell (~/.zshrc):\x1b[0m\n');
+  console.log(`alias ed="${scriptPath} ed"      # Create / Turn ON Extended Display`);
+  console.log(`alias td="${scriptPath} td"      # Terminate / Turn OFF Extended Display`);
+  console.log(`alias pd="${scriptPath} td"      # Terminate / Turn OFF Extended Display`);
+  console.log(`alias evedis="${scriptPath}"     # Launch EVEDIS Host Server`);
+  console.log('\nTo install them permanently into your shell:');
+  console.log(`echo 'alias ed="${scriptPath} ed"' >> ~/.zshrc`);
+  console.log(`echo 'alias td="${scriptPath} td"' >> ~/.zshrc`);
+  console.log(`echo 'alias pd="${scriptPath} td"' >> ~/.zshrc\n`);
+  process.exit(0);
+}
 
 // Middleware
 app.use((req, res, next) => {
@@ -26,6 +99,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
+app.use(express.text({ type: '*/*' }));
 // Serve static assets with clean URLs (.html extension optional)
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html', 'htm'] }));
 
@@ -261,8 +335,49 @@ function startVirtualDisplay(options = {}) {
   });
 }
 
-function stopVirtualDisplay() {
+function bringWindowsToMainScreen() {
+  if (process.platform !== 'darwin') return;
+  const script = `
+if pgrep -x "Google Chrome" >/dev/null 2>&1; then
+  osascript -e 'tell application "Google Chrome" to repeat with w in windows
+    try
+      set b to bounds of w
+      set x1 to item 1 of b
+      set y1 to item 2 of b
+      set x2 to item 3 of b
+      set y2 to item 4 of b
+      set wWidth to x2 - x1
+      set wHeight to y2 - y1
+      if x1 >= 1700 or x1 < 0 then
+        set bounds of w to {60, 60, 60 + wWidth, 60 + wHeight}
+      end if
+    end try
+  end repeat' 2>/dev/null || true
+fi
+if pgrep -x "Brave Browser" >/dev/null 2>&1; then
+  osascript -e 'tell application "Brave Browser" to repeat with w in windows
+    try
+      set b to bounds of w
+      set x1 to item 1 of b
+      set y1 to item 2 of b
+      set x2 to item 3 of b
+      set y2 to item 4 of b
+      set wWidth to x2 - x1
+      set wHeight to y2 - y1
+      if x1 >= 1700 or x1 < 0 then
+        set bounds of w to {60, 60, 60 + wWidth, 60 + wHeight}
+      end if
+    end try
+  end repeat' 2>/dev/null || true
+fi
+`;
+  exec(script, () => {});
+}
+
+function stopVirtualDisplay(options = { bringWindowsHome: true }) {
+  let wasRunning = false;
   if (vDisplayProcess) {
+    wasRunning = true;
     try {
       vDisplayProcess.kill('SIGTERM');
     } catch (e) {}
@@ -270,9 +385,23 @@ function stopVirtualDisplay() {
     vDisplayInfo = null;
     io.emit('vdisplay_status', { active: false });
     renderTerminalDashboard();
-    return { success: true };
+  } else if (process.platform === 'darwin') {
+    try {
+      exec('pkill -f evedis-vdisplay 2>/dev/null || true', () => {});
+    } catch (e) {}
   }
-  return { success: true, message: 'Not running' };
+
+  if (options && options.bringWindowsHome) {
+    bringWindowsToMainScreen();
+    setTimeout(bringWindowsToMainScreen, 200);
+    setTimeout(bringWindowsToMainScreen, 600);
+  }
+
+  return {
+    success: true,
+    wasRunning,
+    message: wasRunning ? 'Virtual display terminated and windows gathered to Screen 1' : 'Not running'
+  };
 }
 
 function setArrangement(position) {
@@ -287,7 +416,7 @@ function setArrangement(position) {
 
 function toggleVirtualDisplay() {
   if (vDisplayProcess) {
-    stopVirtualDisplay();
+    stopVirtualDisplay({ bringWindowsHome: true });
   } else {
     startVirtualDisplay({ position: currentPosition }).catch(() => {});
   }
@@ -332,8 +461,8 @@ async function renderTerminalDashboard() {
     const innerW = 67;
 
     const vDispText = isAttached 
-      ? C.green + C.bold + `● ONLINE (${vDisplayInfo ? vDisplayInfo.width + 'x' + vDisplayInfo.height : '1920x1200'} @ 60Hz)` + C.reset 
-      : C.amber + '○ STANDBY (Set up in Web Console)' + C.reset;
+      ? C.green + C.bold + `● ACTIVE (${vDisplayInfo ? vDisplayInfo.width + 'x' + vDisplayInfo.height : '1920x1200'} @ ${currentPosition})` + C.reset 
+      : C.amber + '○ STANDBY (Press [E] or Web Console)' + C.reset;
 
     const resText = isAttached && vDisplayInfo 
       ? `${vDisplayInfo.width}x${vDisplayInfo.height} @ ${vDisplayInfo.fps}Hz (Active)` 
@@ -395,7 +524,7 @@ async function renderTerminalDashboard() {
     });
 
     console.log(C.dark + '╠' + '═'.repeat(W) + '╣' + C.reset);
-    const hotkeys = ' FAST KEYS: [O] Open Web Console  [N] New PIN  [L/R] Edge  [Q] Exit Server';
+    const hotkeys = ' FAST KEYS: [E] Create/Toggle  [T] Terminate  [O] Web  [N] PIN  [Q] Exit';
     console.log(C.dark + '║ ' + C.green + C.bold + padVisible(hotkeys, W - 2) + C.dark + ' ║' + C.reset);
     console.log(C.dark + '╚' + '═'.repeat(W) + '╝' + C.reset);
   } catch (e) {
@@ -425,7 +554,11 @@ function setupTerminalHotkeys() {
 
     const name = key ? (key.name || str) : str;
 
-    if (name === 'l' || str === 'l' || str === 'L') {
+    if (name === 'e' || str === 'e' || str === 'E') {
+      toggleVirtualDisplay();
+    } else if (name === 't' || str === 't' || str === 'T' || name === 'd' || str === 'd' || str === 'D') {
+      stopVirtualDisplay({ bringWindowsHome: true });
+    } else if (name === 'l' || str === 'l' || str === 'L') {
       setArrangement('left');
     } else if (name === 'r' || str === 'r' || str === 'R') {
       setArrangement('right');
@@ -440,12 +573,8 @@ function setupTerminalHotkeys() {
 
 function cleanupAndExit() {
   process.stdout.write('\x1b[?25h\n');
-  if (vDisplayProcess) {
-    try {
-      vDisplayProcess.kill('SIGTERM');
-    } catch (e) {}
-  }
-  console.log(C.cyan + '\n[EVEDIS] Virtual display detached. Server stopped safely. Goodbye! 👋' + C.reset);
+  stopVirtualDisplay({ bringWindowsHome: true });
+  console.log(C.cyan + '\n[EVEDIS] Virtual display detached. All windows returned to Screen 1. Server stopped. Goodbye! 👋' + C.reset);
   process.exit(0);
 }
 
@@ -500,7 +629,12 @@ app.post('/api/vdisplay/arrange', (req, res) => {
 });
 
 app.post('/api/vdisplay/stop', (req, res) => {
-  const result = stopVirtualDisplay();
+  const result = stopVirtualDisplay({ bringWindowsHome: true });
+  res.json(result);
+});
+
+app.post('/api/vdisplay/terminate', (req, res) => {
+  const result = stopVirtualDisplay({ bringWindowsHome: true });
   res.json(result);
 });
 
@@ -513,12 +647,27 @@ app.post('/api/refresh-pin', async (req, res) => {
 // -------------------------------------------------------------
 // SOCKET.IO SIGNALING
 // -------------------------------------------------------------
+let hostDisconnectTimer = null;
+
 io.on('connection', (socket) => {
   // Host registers itself
   socket.on('register_host', () => {
     hostSocket = socket;
+    if (hostDisconnectTimer) {
+      clearTimeout(hostDisconnectTimer);
+      hostDisconnectTimer = null;
+    }
     socket.emit('vdisplay_status', { active: !!vDisplayProcess, info: vDisplayInfo });
     socket.emit('quality_state', currentQuality);
+  });
+
+  socket.on('host_closing', () => {
+    if (socket === hostSocket) {
+      hostSocket = null;
+      if (vDisplayProcess) {
+        stopVirtualDisplay({ bringWindowsHome: true });
+      }
+    }
   });
 
   socket.on('change_quality', (newQuality) => {
@@ -572,6 +721,15 @@ io.on('connection', (socket) => {
     if (socket === hostSocket) {
       hostSocket = null;
       io.emit('host_disconnected');
+      // If browser closed, give 2.5s grace period for reloads, then auto-terminate display
+      if (vDisplayProcess) {
+        if (hostDisconnectTimer) clearTimeout(hostDisconnectTimer);
+        hostDisconnectTimer = setTimeout(() => {
+          if (!hostSocket && vDisplayProcess) {
+            stopVirtualDisplay({ bringWindowsHome: true });
+          }
+        }, 2500);
+      }
     } else if (clientSockets.has(socket)) {
       clientSockets.delete(socket);
       renderTerminalDashboard();
@@ -585,21 +743,62 @@ io.on('connection', (socket) => {
 // -------------------------------------------------------------
 // SERVER BOOT (VIRTUAL DISPLAY IN STANDBY UNTIL ACTIVATED IN WEB CONSOLE)
 // -------------------------------------------------------------
-server.listen(PORT, '0.0.0.0', async () => {
-  const localIP = getLocalIP();
+function bootServer() {
+  server.listen(PORT, '0.0.0.0', async () => {
+    const localIP = getLocalIP();
 
-  if (process.stdout.isTTY) {
-    dashboardInitialized = true;
-    showStartupBanner();
-    renderTerminalDashboard();
-  } else {
-    console.log(`🚀 EVEDIS Host Server running on http://localhost:${PORT}/host`);
-    console.log(`📱 Tablet Connect: http://${localIP}:${PORT}/client.html?pin=${currentPIN}`);
-  }
+    if (process.stdout.isTTY) {
+      dashboardInitialized = true;
+      showStartupBanner();
+      renderTerminalDashboard();
+    } else {
+      console.log(`🚀 EVEDIS Host Server running on http://localhost:${PORT}/host`);
+      console.log(`📱 Tablet Connect: http://${localIP}:${PORT}/client.html?pin=${currentPIN}`);
+    }
 
-  setupTerminalHotkeys();
+    setupTerminalHotkeys();
 
-  if (process.argv.includes('--open')) {
-    openBrowser(`http://localhost:${PORT}/host`);
-  }
-});
+    if (process.argv.includes('--open')) {
+      openBrowser(`http://localhost:${PORT}/host`);
+    }
+
+    if (process.argv.includes('--auto-display')) {
+      startVirtualDisplay({ position: currentPosition }).catch(() => {});
+    }
+  });
+}
+
+// Check if fast create display was requested via CLI: ./evedis ed
+if (['ed', 'create', 'on', 'start-display'].includes(cliArg)) {
+  const postData = JSON.stringify({ width: 1920, height: 1200, fps: 60, position: 'right' });
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: PORT,
+    path: '/api/vdisplay/start',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData)
+    },
+    timeout: 1200
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      console.log('\x1b[32m✔ EVEDIS Virtual Display created and active on Screen 2!\x1b[0m');
+      console.log('\x1b[90m(Web controller: http://localhost:' + PORT + '/host)\x1b[0m');
+      process.exit(0);
+    });
+  });
+
+  req.on('error', () => {
+    console.log('\x1b[33m⚡ EVEDIS server not running. Starting host server with external display enabled...\x1b[0m');
+    process.argv.push('--auto-display');
+    bootServer();
+  });
+
+  req.write(postData);
+  req.end();
+} else {
+  bootServer();
+}

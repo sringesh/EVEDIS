@@ -684,6 +684,43 @@ h2 {
   color: var(--lcd-green);
 }
 
+.btn-danger-action {
+  background: rgba(255, 68, 68, 0.12);
+  color: #ff6b6b;
+  border-color: rgba(255, 68, 68, 0.35);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-action:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.25);
+  border-color: #ff5555;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 68, 68, 0.35);
+}
+
+.btn-danger-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--lcd-border);
+  color: var(--lcd-text-muted);
+  background: transparent;
+}
+
+.kbd-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  margin-left: 5px;
+  letter-spacing: 0.5px;
+  color: inherit;
+  opacity: 0.85;
+}
+
 .btn-sm {
   padding: 6px 12px;
   font-size: 10px;

@@ -654,8 +654,8 @@ if (btnStopVDisplay) {
   btnStopVDisplay.addEventListener('click', async () => {
     btnStopVDisplay.disabled = true;
     const endpoints = isLocalOrigin 
-      ? ['/api/vdisplay/stop'] 
-      : ['http://localhost:4040/api/vdisplay/stop', '/api/vdisplay/stop'];
+      ? ['/api/vdisplay/terminate', '/api/vdisplay/stop'] 
+      : ['http://localhost:4040/api/vdisplay/terminate', '/api/vdisplay/terminate', '/api/vdisplay/stop'];
 
     for (const url of endpoints) {
       try {
@@ -663,8 +663,58 @@ if (btnStopVDisplay) {
       } catch (e) {}
     }
     updateVDisplayUI(false);
+    showRetroToast('🛑 External display terminated. All windows gathered back to Screen 1.');
   });
 }
+
+// Auto-terminate external display when browser tab/window is closed
+function notifyServerOfHostClose() {
+  const data = JSON.stringify({ reason: 'host_page_closed' });
+  const stopUrl = isLocalOrigin ? '/api/vdisplay/terminate' : 'http://localhost:4040/api/vdisplay/terminate';
+
+  if (navigator.sendBeacon) {
+    try {
+      const blob = new Blob([data], { type: 'application/json' });
+      navigator.sendBeacon(stopUrl, blob);
+    } catch (e) {}
+  } else {
+    try {
+      fetch(stopUrl, { method: 'POST', keepalive: true, body: data });
+    } catch (e) {}
+  }
+
+  if (socket && socket.connected) {
+    try {
+      socket.emit('host_closing');
+      socket.disconnect();
+    } catch (e) {}
+  }
+}
+
+window.addEventListener('beforeunload', notifyServerOfHostClose);
+window.addEventListener('pagehide', notifyServerOfHostClose);
+
+// Keyboard Shortcuts: ⌘⇧E (Create Virtual Display), ⌘⇧T / ⌘⇧P / ⌘⇧D (Terminate Display)
+document.addEventListener('keydown', (e) => {
+  const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+  if (!isCmdOrCtrl) return;
+
+  // ⌘ + Shift + E -> Create Extended Screen
+  if (e.shiftKey && (e.key === 'e' || e.key === 'E')) {
+    e.preventDefault();
+    if (btnStartVDisplay && !btnStartVDisplay.disabled) {
+      btnStartVDisplay.click();
+    }
+  }
+
+  // ⌘ + Shift + T or ⌘ + Shift + P or ⌘ + Shift + D -> Terminate Display & Gather Windows
+  if (e.shiftKey && (e.key === 't' || e.key === 'T' || e.key === 'p' || e.key === 'P' || e.key === 'd' || e.key === 'D')) {
+    e.preventDefault();
+    if (btnStopVDisplay && !btnStopVDisplay.disabled) {
+      btnStopVDisplay.click();
+    }
+  }
+});
 
 // 5. Screen Capture & WebRTC Setup
 if (btnStartCapture) {
