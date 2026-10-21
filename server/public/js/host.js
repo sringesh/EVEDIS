@@ -277,10 +277,7 @@ async function syncSessionToFirestore(pin) {
 
 // 3. Initial State Load (tries local backend if reachable, falls back to instant client generation)
 async function loadStatus() {
-  // Always generate PIN & QR code immediately so UI is 100% ready
-  generateAndDisplayPairingInfo();
-
-  // Try local backend for hardware display driver status
+  // Try local backend for hardware display driver status & real server pairing PIN
   const apiUrls = isLocalOrigin 
     ? ['/api/status'] 
     : ['http://localhost:4040/api/status', '/api/status'];
@@ -290,13 +287,16 @@ async function loadStatus() {
       const res = await fetch(url, { signal: AbortSignal.timeout(1500) });
       if (res.ok) {
         const data = await res.json();
+        if (data.pin) {
+          currentPIN = data.pin;
+        }
         if (data.localIP && data.localIP !== '127.0.0.1') {
           detectedLANIP = data.localIP;
-          generateAndDisplayPairingInfo(currentPIN);
-          if (wifiLinkVal) {
-            const netType = data.networkType || 'Direct Wi-Fi';
-            wifiLinkVal.textContent = `${netType} (${data.localIP}:${data.port || 4040})`;
-          }
+        }
+        generateAndDisplayPairingInfo(currentPIN);
+        if (wifiLinkVal && data.localIP) {
+          const netType = data.networkType || 'Direct Wi-Fi';
+          wifiLinkVal.textContent = `${netType} (${data.localIP}:${data.port || 4040})`;
         }
         if (data.vDisplay && data.vDisplay.status === 'active') {
           updateVDisplayUI(true, data.vDisplay);
@@ -307,13 +307,15 @@ async function loadStatus() {
         if (data.quality) {
           applyStreamQuality(data.quality, false);
         }
-        break;
+        return;
       }
     } catch (e) {
       // Local daemon not reachable, cloud mode remains active
     }
   }
 
+  // Fallback if local backend is not reachable
+  generateAndDisplayPairingInfo();
   if (!detectedLANIP && wifiLinkVal) {
     wifiLinkVal.textContent = 'Cloud WebRTC (P2P Relay)';
   }
@@ -617,11 +619,33 @@ if (btnRadarCopyUrl) {
   });
 }
 
+// Synchronized PIN refresh across server and UI
+async function requestFreshPin() {
+  const endpoints = isLocalOrigin 
+    ? ['/api/refresh-pin'] 
+    : ['http://localhost:4040/api/refresh-pin', '/api/refresh-pin'];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { method: 'POST', signal: AbortSignal.timeout(1500) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.pin) {
+          generateAndDisplayPairingInfo(data.pin);
+          return;
+        }
+      }
+    } catch (e) {}
+  }
+  // Fallback if server is not reachable
+  generateAndDisplayPairingInfo();
+}
+
 if (btnRadarRefreshPin) {
-  btnRadarRefreshPin.addEventListener('click', () => {
+  btnRadarRefreshPin.addEventListener('click', async () => {
     btnRadarRefreshPin.disabled = true;
     btnRadarRefreshPin.textContent = 'Generating...';
-    generateAndDisplayPairingInfo();
+    await requestFreshPin();
     showRetroToast('🔄 Generated fresh 6-digit PIN & QR code.');
     setTimeout(() => {
       btnRadarRefreshPin.disabled = false;
@@ -793,12 +817,12 @@ if (btnCopyUrl) {
   });
 }
 
-// Manual PIN & QR Code Refresh Button (Always generates a fresh PIN)
+// Manual PIN & QR Code Refresh Button (Always generates a fresh PIN synchronized with server)
 if (btnRefreshPin) {
-  btnRefreshPin.addEventListener('click', () => {
+  btnRefreshPin.addEventListener('click', async () => {
     btnRefreshPin.disabled = true;
     btnRefreshPin.textContent = 'Generating...';
-    generateAndDisplayPairingInfo();
+    await requestFreshPin();
     showRetroToast('🔄 Generated fresh 6-digit PIN & QR code.');
     setTimeout(() => {
       btnRefreshPin.disabled = false;

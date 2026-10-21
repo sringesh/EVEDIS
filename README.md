@@ -12,87 +12,59 @@ Unlike basic screen mirroring, EVEDIS creates a **genuine independent secondary 
 
 ---
 
-## ⚡ Fast Start: The Single Command
+## ⚡ 1-Line Quick Start (For Any New User)
 
-EVEDIS starts with a **single fast command** in your terminal. It boots the host server, displays the bold `EVEDIS` banner and retro LCD status monitor with your localhost and tablet links, and stays ready:
+If you are on a fresh Mac or PC and have never installed EVEDIS before, simply open Terminal and paste **one line**:
 
-```bash
-# In the cloned repo:
-./evedis
-
-# Or if installed globally (npm link):
-evedis
-```
-
-### 📺 Terminal LCD Monitor & Web Activation
-Running EVEDIS brings up the retro LCD monitor in your terminal:
-* **Server Status**: Shows server online with direct links for localhost and your tablet.
-* **Standby Mode**: The virtual display driver stays safely in standby until you click **"Create Extended Screen"** on the website (`http://localhost:4040/host`).
-* **Live Synchronization**: Once you create the display on the website, the terminal LCD dynamically switches from `[○ STANDBY]` to `[● ACTIVE]`!
-
-```text
-╔═════════════════════════════════════════════════════════════════════════════╗
-║ ⚡ EVEDIS LCD MONITOR // HOST SERVER STARTED                     [○ STANDBY] ║
-╠═════════════════════════════════════════════════════════════════════════════╣
-║                                                                             ║
-║   ● EVEDIS SERVER STARTED ON LOCALHOST                                      ║
-║     Host controller is active. Create your external display in web console: ║
-║                                                                             ║
-║   HOST WEB CONSOLE:   http://localhost:4040/host                            ║
-║   TABLET CONNECT URL: http://192.168.0.170:4040/client.html?pin=418409      ║
-║   PAIRING PIN:          4 1 8 4 0 9                                         ║
-║                                                                             ║
-║   ┌── DISPLAY & NETWORK STATUS ──────────────────────────────────────────┐  ║
-║   │ VIRTUAL DISPLAY:                  ○ STANDBY (Set up in Web Console) │   ║
-║   │ RESOLUTION:                                  1920x1200 @ 60Hz HiDPI │   ║
-║   │ EDGE POSITION:                                 RIGHT OF PRIMARY [R] │   ║
-║   │ WI-FI INTERFACE:                  Wi-Fi Direct (192.168.0.170:4040) │   ║
-║   │ TABLET CLIENTS:                                         0 Connected │   ║
-║   └─────────────────────────────────────────────────────────────────────┘   ║
-║                                                                             ║
-║   👉 Open http://localhost:4040/host in your browser to create display!     ║
-║                                                                             ║
-╠═════════════════════════════════════════════════════════════════════════════╣
-║  FAST KEYS: [O] Open Web Console  [N] New PIN  [L/R] Edge  [Q] Exit Server  ║
-╚═════════════════════════════════════════════════════════════════════════════╝
-```
-
-#### ⌨️ Terminal Fast Keys
-| Key | Action |
-|---|---|
-| `<O>` | **Open Web Console** (Opens `http://localhost:4040/host` in your default browser) |
-| `<N>` | **Rotate Pairing Code** (Generates fresh 6-digit PIN and updates tablet link) |
-| `<L>` | **Arrange Left** (Positions virtual screen to the left edge of your laptop) |
-| `<R>` | **Arrange Right** (Positions virtual screen to the right edge of your laptop) |
-| `<Q>` / `Ctrl+C` | **Exit Server** (Gracefully shuts down host server) |
-| `<Q>` / `Ctrl+C` | **Clean Detach & Exit** (Gracefully tears down virtual display and exits) |
-
----
-
-### 🍎 1-Line Terminal Install (macOS)
+### 🍎 macOS Instant One-Liner (Zero-Setup)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sringesh/EVEDIS/main/install.sh | bash
 ```
+*(Or via web mirror: `curl -sSL https://evedis.web.app/install.sh | bash`)*
 
-**Or Clone & Run Manually:**
-```bash
-git clone https://github.com/sringesh/EVEDIS.git
-cd evedis
-./evedis
-```
-> **Tip for Mac Users:** You can also just double-click **`start.command`** in Finder to launch EVEDIS instantly!
+This command automatically:
+1. Clones EVEDIS into `~/evedis`.
+2. Installs dependencies and builds the native macOS Virtual Display Driver.
+3. Adds permanent shell shortcuts (`evedis`, `ed`, `td`) so you can type them from anywhere.
+4. Starts the EVEDIS Host Server and opens your browser console!
 
 ---
 
-### 🪟 Windows (1-Line Quick Start)
-1. Ensure [Node.js](https://nodejs.org) is installed.
-2. Open Command Prompt or PowerShell:
-```cmd
-git clone https://github.com/sringesh/EVEDIS.git
-cd evedis
-start.bat
+### 🪟 Windows Quick Start (PowerShell / Command Prompt)
+```powershell
+git clone https://github.com/sringesh/EVEDIS.git && cd EVEDIS && npm start
 ```
-*(Or double-click `start.bat` in Windows Explorer).*
+*(Or in PowerShell: `irm https://evedis.web.app/install.ps1 | iex`)*
+
+---
+
+## 🚀 Daily Commands & Fast Shortcuts
+
+Once installed, you can control EVEDIS from **anywhere in your terminal**:
+
+| Command | Action |
+|---|---|
+| `evedis` | **Launch EVEDIS Host Server** (opens LCD dashboard) |
+| `ed` or `./evedis ed` | **Turn ON / Create Extended Display** instantly |
+| `td` or `pd` or `./evedis td` | **Turn OFF / Terminate Display** & gather all windows to Screen 1 |
+| `./evedis kill` | **Shut down** display driver and background server |
+
+### ⌨️ Terminal Interactive Keys (While EVEDIS is running)
+| Key | Action |
+|---|---|
+| `<E>` | **Create / Toggle Extended Display** instantly without touching the mouse |
+| `<T>` or `<D>` | **Terminate Display & Reset Windows** safely back to Screen 1 |
+| `<O>` | **Open Web Console** (`http://localhost:4040/host`) |
+| `<N>` | **Rotate Pairing Code** (Generates fresh 6-digit PIN) |
+| `<L>` / `<R>` | **Arrange Screen Edge** (Left or Right of Laptop) |
+| `<Q>` / `Ctrl+C` | **Clean Detach & Exit** |
+
+---
+
+### 🌐 Web Console Shortcuts & Safety
+* **`⌘ + Shift + E`** (or `Ctrl + Shift + E`): Create Extended Screen.
+* **`⌘ + Shift + T`** (or `⌘ + Shift + P` / `⌘ + Shift + D`): Terminate Screen & Gather Windows.
+* **Auto-Termination on Browser Close**: Whenever you close your Chrome/Safari host tab or quit the browser, the external virtual display automatically terminates within seconds and returns all open windows onto Screen 1!
 
 ---
 

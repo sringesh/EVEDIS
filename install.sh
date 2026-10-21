@@ -1,47 +1,101 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-echo "=========================================================="
-echo "    🚀 INSTALLING EVEDIS // EXTENDED VIRTUAL DISPLAY      "
-echo "        Created by Sringesh V. (reachsringesh@gmail.com)  "
-echo "=========================================================="
+# ==============================================================
+# EVEDIS - One-Line Zero-Setup Installer & Runner
+# https://github.com/sringesh/EVEDIS
+# ==============================================================
 
-TARGET_DIR="$HOME/evedis"
+BOLD="\033[1m"
+GREEN="\033[38;2;163;255;18m"
+CYAN="\033[38;2;85;210;255m"
+AMBER="\033[38;2;255;184;0m"
+RED="\033[38;2;255;85;85m"
+RESET="\033[0m"
 
-# Check Node.js
+echo -e "${GREEN}${BOLD}"
+echo " ███████╗██╗   ██╗███████╗██████╗ ██╗███████╗"
+echo " ██╔════╝██║   ██║██╔════╝██╔══██╗██║██╔════╝  WIRELESS EXTENDED DISPLAY"
+echo " █████╗  ██║   ██║█████╗  ██║  ██║██║███████╗  Open Source • by Sringesh V."
+echo " ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║  ██║██║╚════██║  https://github.com/sringesh/EVEDIS"
+echo " ███████╗ ╚████╔╝ ███████╗██████╔╝██║███████║"
+echo " ╚══════╝  ╚═══╝  ╚══════╝╚═════╝ ╚═╝╚══════╝"
+echo -e "${RESET}"
+
+echo -e "${CYAN}⚡ Setting up EVEDIS on your machine...${RESET}\n"
+
+# 1. Check for Node.js
 if ! command -v node >/dev/null 2>&1; then
-  echo "❌ Error: Node.js is required to run EVEDIS."
-  echo "👉 Please install Node.js from https://nodejs.org or run 'brew install node'"
-  exit 1
+  echo -e "${AMBER}⚠️  Node.js was not detected on your machine.${RESET}"
+  if [[ "$OSTYPE" == "darwin"* ]] && command -v brew >/dev/null 2>&1; then
+    echo -e "${CYAN}📦 Installing Node.js via Homebrew...${RESET}"
+    brew install node
+  else
+    echo -e "${RED}❌ Please install Node.js (v18+) from https://nodejs.org and run this command again.${RESET}"
+    exit 1
+  fi
 fi
 
-# Check Git
+# 2. Check for Git
 if ! command -v git >/dev/null 2>&1; then
-  echo "❌ Error: Git is required."
-  echo "👉 Please install git or Xcode command line tools ('xcode-select --install')"
+  echo -e "${RED}❌ Git is required. Install Xcode Command Line Tools with: xcode-select --install${RESET}"
   exit 1
 fi
 
-# Clone or update
-if [ -d "$TARGET_DIR" ]; then
-  echo "📂 Updating existing EVEDIS installation at $TARGET_DIR..."
-  cd "$TARGET_DIR"
-  git pull origin main || true
+# 3. Clone or update repository into ~/evedis
+INSTALL_DIR="$HOME/evedis"
+if [ -d "$INSTALL_DIR/.git" ]; then
+  echo -e "${CYAN}🔄 Updating existing EVEDIS installation in $INSTALL_DIR...${RESET}"
+  cd "$INSTALL_DIR"
+  git pull --quiet
 else
-  echo "📥 Cloning EVEDIS to $TARGET_DIR..."
-  git clone https://github.com/sringesh/EVEDIS.git "$TARGET_DIR"
-  cd "$TARGET_DIR"
+  echo -e "${CYAN}📥 Cloning EVEDIS repository into $INSTALL_DIR...${RESET}"
+  git clone --quiet https://github.com/sringesh/EVEDIS.git "$INSTALL_DIR"
+  cd "$INSTALL_DIR"
 fi
 
-echo "📦 Installing dependencies..."
-npm install
-cd server && npm install && cd ..
+# 4. Install dependencies
+echo -e "${CYAN}📦 Installing project dependencies...${RESET}"
+npm install --silent
+cd server && npm install --silent && cd ..
 
-chmod +x start.sh start.command evedis bin/evedis.js 2>/dev/null || true
+# 5. Build macOS Virtual Display driver if on Mac
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  echo -e "${CYAN}⚙️  Building macOS CoreGraphics Virtual Display Driver...${RESET}"
+  clang -framework CoreGraphics -framework Foundation macos-virtual-display/evedis_vdisplay.m -o macos-virtual-display/evedis-vdisplay
+  chmod +x macos-virtual-display/evedis-vdisplay
+fi
 
-# Optional global link so user can just type 'evedis' from any terminal
-npm link 2>/dev/null || true
+chmod +x evedis bin/evedis.js
 
-echo "✨ Installation complete!"
-echo "🚀 Launching EVEDIS Host..."
-./evedis
+# 6. Install shell aliases into ~/.zshrc and ~/.bashrc
+add_alias_if_missing() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    if ! grep -q "alias evedis=" "$file"; then
+      echo "" >> "$file"
+      echo "# EVEDIS Fast Command Shortcuts" >> "$file"
+      echo "alias evedis=\"$INSTALL_DIR/evedis\"" >> "$file"
+      echo "alias ed=\"$INSTALL_DIR/evedis ed\"" >> "$file"
+      echo "alias td=\"$INSTALL_DIR/evedis td\"" >> "$file"
+      echo "alias pd=\"$INSTALL_DIR/evedis td\"" >> "$file"
+    fi
+  elif [ "$file" = "$HOME/.zshrc" ]; then
+    echo "# EVEDIS Fast Command Shortcuts" > "$file"
+    echo "alias evedis=\"$INSTALL_DIR/evedis\"" >> "$file"
+    echo "alias ed=\"$INSTALL_DIR/evedis ed\"" >> "$file"
+    echo "alias td=\"$INSTALL_DIR/evedis td\"" >> "$file"
+    echo "alias pd=\"$INSTALL_DIR/evedis td\"" >> "$file"
+  fi
+}
+
+add_alias_if_missing "$HOME/.zshrc"
+add_alias_if_missing "$HOME/.bashrc"
+
+echo -e "\n${GREEN}✔ EVEDIS is installed and ready!${RESET}"
+echo -e "${CYAN}Tip: From now on, you can type ${BOLD}evedis${RESET}${CYAN} anywhere in Terminal to launch!${RESET}"
+echo -e "${CYAN}Use ${BOLD}ed${RESET}${CYAN} to create display and ${BOLD}td${RESET}${CYAN} to terminate.${RESET}\n"
+echo -e "${GREEN}🚀 Launching EVEDIS Host Server now...${RESET}\n"
+
+# 7. Launch EVEDIS with auto-open browser
+exec "$INSTALL_DIR/evedis" --open "$@"

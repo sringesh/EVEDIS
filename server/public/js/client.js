@@ -2,11 +2,35 @@
 // Dual-Mode Architecture: Works with Local Wi-Fi (Socket.io) & Global Cloud (Firebase Firestore)
 
 let socket = null;
-const isLocalOrigin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Determine where the host socket server is located
+function resolveSocketUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const hostParam = params.get('host'); // e.g. ?host=192.168.0.170:4040
+  if (hostParam) {
+    return hostParam.startsWith('http') ? hostParam : `http://${hostParam}`;
+  }
+  // If the page is loaded from local network IP (e.g. 192.168.x.x:4040, localhost, 10.x.x.x, etc.)
+  const isCloudHost = window.location.hostname === 'evedis.web.app' || window.location.hostname === 'evedis.firebaseapp.com';
+  if (!isCloudHost) {
+    return window.location.origin;
+  }
+  return 'http://localhost:4040';
+}
+
+const socketUrl = resolveSocketUrl();
 try {
   if (typeof io !== 'undefined') {
-    const socketUrl = isLocalOrigin ? window.location.origin : 'http://localhost:4040';
-    socket = io(socketUrl, { autoConnect: true, reconnectionAttempts: 2, timeout: 2000 });
+    socket = io(socketUrl, { autoConnect: true, reconnectionAttempts: 5, timeout: 3000 });
+    socket.on('connect', () => {
+      console.log('[Socket] Connected to EVEDIS Host Server at:', socketUrl);
+      // Auto-pair if 6-digit PIN is already in URL
+      const params = new URLSearchParams(window.location.search);
+      const urlPin = params.get('pin');
+      if (urlPin && urlPin.replace(/\D/g, '').length === 6 && !peerConnection) {
+        setTimeout(attemptPairing, 200);
+      }
+    });
   }
 } catch (e) {
   console.warn('[Socket] Operating in Cloud Firestore mode');
@@ -92,26 +116,32 @@ function onPairSuccess() {
 
 // 3. Pairing Attempt (Dual: Socket.io or Firestore)
 async function attemptPairing() {
-  const pin = pinInput.value.trim();
+  const pin = (pinInput ? pinInput.value : '').replace(/\D/g, '').trim();
   if (pin.length !== 6) {
-    pairingError.textContent = 'Please enter a 6-digit PIN';
+    if (pairingError) pairingError.textContent = 'Please enter a 6-digit PIN';
     return;
   }
 
-  pairingError.textContent = '';
-  btnConnect.disabled = true;
-  btnConnect.textContent = 'Connecting...';
+  if (pairingError) pairingError.textContent = '';
+  if (btnConnect) {
+    btnConnect.disabled = true;
+    btnConnect.textContent = 'Connecting...';
+  }
   activeSessionPin = pin;
 
   // Mode A: Local Socket.io if connected
   if (socket && socket.connected) {
     socket.emit('pair_client', { pin }, (response) => {
-      btnConnect.disabled = false;
-      btnConnect.textContent = 'Connect to Host';
+      if (btnConnect) {
+        btnConnect.disabled = false;
+        btnConnect.textContent = 'Connect to Host';
+      }
       if (response && response.success) {
         onPairSuccess();
       } else {
-        pairingError.textContent = response ? response.message : 'Connection failed. Check PIN.';
+        if (pairingError) {
+          pairingError.textContent = response ? response.message : 'Invalid PIN. Check the 6-digit code on the host.';
+        }
       }
     });
     return;
