@@ -41,6 +41,7 @@ const pairingScreen = document.getElementById('pairingScreen');
 const pinInput = document.getElementById('pinInput');
 const btnConnect = document.getElementById('btnConnect');
 const pairingError = document.getElementById('pairingError');
+const sessionTerminatedBanner = document.getElementById('sessionTerminatedBanner');
 
 const displayContainer = document.getElementById('displayContainer');
 const videoStage = document.getElementById('videoStage');
@@ -77,6 +78,7 @@ let wakeLock = null;
 let hudTimeout = null;
 let activeSessionPin = null;
 let firestoreSessionRef = null;
+let isTerminatedHandled = false;
 
 // Display Scale & Pan State
 let currentScale = 1.0;
@@ -107,11 +109,103 @@ if (pinFromUrl) {
 // 2. Successful Pairing Transition
 function onPairSuccess() {
   console.log('[Client] Paired successfully!');
+  isTerminatedHandled = false;
+  if (sessionTerminatedBanner) sessionTerminatedBanner.style.display = 'none';
   pairingScreen.style.display = 'none';
   displayContainer.style.display = 'flex';
   setupWebRTC();
   showFullscreenPrompt();
   autoAdjustForTabletScreen();
+}
+
+// Cleanly handle host termination and return to pairing screen
+function handleHostTerminated(customMessage) {
+  if (isTerminatedHandled) return;
+  isTerminatedHandled = true;
+  console.log('[Client] Host terminated session. Resetting stream and UI:', customMessage);
+
+  // 1. Immediately pause, detach and kill remote video stream (stops frozen frame!)
+  if (remoteVideo) {
+    try {
+      remoteVideo.pause();
+    } catch (e) {}
+    if (remoteVideo.srcObject) {
+      try {
+        const stream = remoteVideo.srcObject;
+        if (stream.getTracks) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      } catch (e) {}
+      remoteVideo.srcObject = null;
+    }
+  }
+
+  // 2. Tear down WebRTC connections
+  if (dataChannel) {
+    try { dataChannel.close(); } catch (e) {}
+    dataChannel = null;
+  }
+  if (peerConnection) {
+    try { peerConnection.close(); } catch (e) {}
+    peerConnection = null;
+  }
+
+  // 3. Close open drawers and prompts
+  if (scaleDrawer) scaleDrawer.classList.remove('open');
+  if (qualityDrawer) qualityDrawer.classList.remove('open');
+  if (floatingHUD) floatingHUD.classList.remove('visible');
+  if (fullscreenPrompt) {
+    fullscreenPrompt.style.display = 'none';
+    fullscreenPrompt.style.opacity = '1';
+  }
+
+  // 4. Reset scale and positioning
+  currentScale = 1.0;
+  panX = 0;
+  panY = 0;
+  if (videoStage) {
+    videoStage.style.transform = 'translate3d(0px, 0px, 0) scale(1)';
+  }
+
+  // 5. Hide display stage and transition back to pairing screen
+  if (displayContainer) displayContainer.style.display = 'none';
+  if (pairingScreen) pairingScreen.style.display = 'flex';
+
+  // 6. Show retro session terminated banner with message
+  if (sessionTerminatedBanner) {
+    sessionTerminatedBanner.style.display = 'flex';
+    const textEl = sessionTerminatedBanner.querySelector('.terminated-text');
+    if (textEl && customMessage) {
+      textEl.textContent = customMessage;
+    }
+  }
+
+  // 7. Clear the expired PIN input and URL so refreshing doesn't loop
+  if (pinInput) {
+    pinInput.value = '';
+    pinInput.disabled = false;
+  }
+  if (btnConnect) {
+    btnConnect.disabled = false;
+    btnConnect.textContent = 'Connect to Host';
+  }
+  if (pairingError) {
+    pairingError.textContent = '';
+  }
+  activeSessionPin = null;
+
+  try {
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has('pin')) {
+      currentUrl.searchParams.delete('pin');
+      const newQuery = currentUrl.searchParams.toString() ? `?${currentUrl.searchParams.toString()}` : '';
+      window.history.replaceState({}, document.title, `${currentUrl.pathname}${newQuery}`);
+    }
+  } catch (e) {}
+
+  setTimeout(() => {
+    if (pinInput) pinInput.focus();
+  }, 200);
 }
 
 // 3. Pairing Attempt (Dual: Socket.io or Firestore)
@@ -169,10 +263,17 @@ async function attemptPairing() {
 
       onPairSuccess();
 
-      // Listen for WebRTC offer from host
+      // Listen for WebRTC offer or termination from host
       firestoreSessionRef.onSnapshot(async (snap) => {
-        if (!snap.exists) return;
+        if (!snap.exists) {
+          handleHostTerminated('The host external display session ended. Scan the new QR code or enter the 6-digit PIN to reconnect.');
+          return;
+        }
         const sData = snap.data();
+        if (sData.hostTerminated || sData.hostOnline === false) {
+          handleHostTerminated('The host computer terminated the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
+          return;
+        }
         if (sData.webrtc_offer && (!peerConnection || peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer')) {
           await handleCloudWebRTCOffer(sData.webrtc_offer);
         }
@@ -273,6 +374,14 @@ function setupWebRTC() {
     console.log('[WebRTC] Received remote stream track:', event.track.kind);
     remoteVideo.srcObject = event.streams[0];
     
+    // Detect when video track is ended by host
+    if (event.track) {
+      event.track.onended = () => {
+        console.log('[WebRTC] Remote video track ended by host');
+        handleHostTerminated('The host computer ended the display stream. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
+      };
+    }
+    
     const receivers = peerConnection.getReceivers();
     const videoReceiver = receivers.find(r => r.track && r.track.kind === 'video');
     if (videoReceiver && 'playoutDelayHint' in videoReceiver) {
@@ -301,14 +410,22 @@ function setupWebRTC() {
   peerConnection.ondatachannel = (event) => {
     dataChannel = event.channel;
     console.log('[WebRTC] DataChannel established');
+    dataChannel.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'host_terminated') {
+          handleHostTerminated('The host computer ended the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
+        }
+      } catch (err) {}
+    };
   };
 
   peerConnection.onconnectionstatechange = () => {
     console.log('[WebRTC] Connection state:', peerConnection.connectionState);
     if (peerConnection.connectionState === 'connected') {
       hudStatus.textContent = 'Live (P2P)';
-    } else if (peerConnection.connectionState === 'disconnected') {
-      hudStatus.textContent = 'Reconnecting...';
+    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
+      handleHostTerminated('Host connection was closed. Scan the new QR code or enter the 6-digit PIN to reconnect.');
     }
   };
 }
@@ -356,9 +473,22 @@ if (socket) {
     updateClientQualityUI(quality);
   });
 
+  socket.on('display_terminated', (data) => {
+    console.log('[Socket] Received display_terminated event:', data);
+    const msg = (data && data.message) ? data.message : 'The host computer terminated the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.';
+    handleHostTerminated(msg);
+  });
+
+  socket.on('vdisplay_status', (data) => {
+    if (data && data.active === false) {
+      console.log('[Socket] Virtual display is inactive');
+      handleHostTerminated('The host computer ended the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
+    }
+  });
+
   socket.on('host_disconnected', () => {
-    alert('Host disconnected.');
-    location.reload();
+    console.log('[Socket] Host disconnected');
+    handleHostTerminated('The host computer disconnected. Scan the new QR code or enter the 6-digit PIN to reconnect.');
   });
 }
 
@@ -598,7 +728,6 @@ if (btnToggleFullscreen) {
 
 if (btnDisconnect) {
   btnDisconnect.addEventListener('click', () => {
-    if (peerConnection) peerConnection.close();
-    location.reload();
+    handleHostTerminated('You disconnected from the external display session. Scan the new QR code or enter the 6-digit PIN to reconnect.');
   });
 }

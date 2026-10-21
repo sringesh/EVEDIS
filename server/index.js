@@ -431,13 +431,18 @@ function stopVirtualDisplay(options = { bringWindowsHome: true }) {
     } catch (e) {}
     vDisplayProcess = null;
     vDisplayInfo = null;
-    io.emit('vdisplay_status', { active: false });
-    renderTerminalDashboard();
   } else if (process.platform === 'darwin') {
     try {
       exec('pkill -f evedis-vdisplay 2>/dev/null || true', () => {});
     } catch (e) {}
   }
+
+  io.emit('vdisplay_status', { active: false });
+  io.emit('display_terminated', {
+    reason: 'host_terminated',
+    message: 'The host computer has terminated the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.'
+  });
+  renderTerminalDashboard();
 
   if (options && options.bringWindowsHome) {
     bringWindowsToMainScreen();

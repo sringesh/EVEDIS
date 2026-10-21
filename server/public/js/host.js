@@ -69,6 +69,7 @@ const wifiConditionBadge = document.getElementById('wifiConditionBadge');
 // WebRTC State
 let localStream = null;
 let peerConnection = null;
+let dataChannel = null;
 let currentClientId = null;
 let currentPosition = 'right';
 let currentPIN = Math.floor(100000 + Math.random() * 900000).toString();
@@ -674,9 +675,61 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeQrModal();
 });
 
+// Terminate host WebRTC streaming, release screen capture, and notify client
+function terminateHostSession(reason = 'host_stopped') {
+  console.log('[Host] Terminating session:', reason);
+
+  // 1. Direct WebRTC DataChannel message
+  if (dataChannel && dataChannel.readyState === 'open') {
+    try {
+      dataChannel.send(JSON.stringify({ type: 'host_terminated', reason }));
+    } catch (e) {}
+  }
+
+  // 2. Stop and release local screen capture stream (triggers client's track.onended)
+  if (localStream) {
+    try {
+      localStream.getTracks().forEach(t => t.stop());
+    } catch (e) {}
+    localStream = null;
+  }
+  if (localPreview) localPreview.srcObject = null;
+  if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
+  if (btnStartCapture) btnStartCapture.disabled = false;
+  if (btnStopCapture) btnStopCapture.disabled = true;
+  if (streamStats) streamStats.style.display = 'none';
+  if (hostStatusBadge) {
+    hostStatusBadge.textContent = 'Ready';
+    hostStatusBadge.className = 'badge badge-idle';
+  }
+
+  // 3. Close WebRTC PeerConnection
+  if (peerConnection) {
+    try {
+      peerConnection.close();
+    } catch (e) {}
+    peerConnection = null;
+  }
+  dataChannel = null;
+
+  // 4. Update Firestore session document so cloud tablets receive termination
+  if (typeof firebase !== 'undefined' && firebase.firestore && window.__IS_FIREBASE_CONFIGURED__ && currentPIN) {
+    try {
+      const db = firebase.firestore();
+      db.collection('sessions').doc(currentPIN).update({
+        hostTerminated: true,
+        hostOnline: false,
+        terminatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(() => {});
+    } catch (e) {}
+  }
+}
+
 if (btnStopVDisplay) {
   btnStopVDisplay.addEventListener('click', async () => {
     btnStopVDisplay.disabled = true;
+    terminateHostSession('host_stopped_display');
+
     const endpoints = isLocalOrigin 
       ? ['/api/vdisplay/terminate', '/api/vdisplay/stop'] 
       : ['http://localhost:4040/api/vdisplay/terminate', '/api/vdisplay/terminate', '/api/vdisplay/stop'];
@@ -693,6 +746,8 @@ if (btnStopVDisplay) {
 
 // Auto-terminate external display when browser tab/window is closed
 function notifyServerOfHostClose() {
+  terminateHostSession('host_page_closed');
+
   const data = JSON.stringify({ reason: 'host_page_closed' });
   const stopUrl = isLocalOrigin ? '/api/vdisplay/terminate' : 'http://localhost:4040/api/vdisplay/terminate';
 
@@ -785,22 +840,8 @@ if (btnStartCapture) {
 }
 
 function stopCapture() {
-  if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
-  }
-  localPreview.srcObject = null;
-  previewPlaceholder.style.display = 'flex';
-  btnStartCapture.disabled = false;
-  btnStopCapture.disabled = true;
-  streamStats.style.display = 'none';
-  hostStatusBadge.textContent = 'Ready';
-  hostStatusBadge.className = 'badge badge-idle';
-
-  if (peerConnection) {
-    peerConnection.close();
-    peerConnection = null;
-  }
+  terminateHostSession('capture_stopped');
+  showRetroToast('⏹️ Screen capture stopped.');
 }
 
 if (btnStopCapture) {
@@ -882,7 +923,7 @@ async function initiateWebRTC() {
     }
   };
 
-  const dataChannel = peerConnection.createDataChannel('touch_events');
+  dataChannel = peerConnection.createDataChannel('touch_events');
   dataChannel.onmessage = (e) => {
     console.log('[Touch DataChannel received]:', e.data);
   };

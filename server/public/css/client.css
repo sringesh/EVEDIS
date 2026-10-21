@@ -111,6 +111,54 @@ html, body {
 .pairing-card::before { top: -6px; left: -4px; }
 .pairing-card::after { bottom: -6px; right: -4px; }
 
+/* Host Terminated Display Session Alert Banner */
+.session-terminated-banner {
+  background: rgba(255, 51, 68, 0.12);
+  border: 2px solid #ff3344;
+  box-shadow: 0 0 24px rgba(255, 51, 68, 0.35);
+  padding: 16px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: terminatedPulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 2px;
+}
+
+@keyframes terminatedPulse {
+  0% { transform: scale(0.94); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.terminated-badge {
+  display: inline-block;
+  align-self: center;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  background: #ff3344;
+  color: #fff;
+  padding: 3px 8px;
+  letter-spacing: 1.2px;
+  border-radius: 2px;
+}
+
+.terminated-title {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: #ff6677;
+  text-shadow: 0 0 10px rgba(255, 51, 68, 0.6);
+  margin: 2px 0;
+  letter-spacing: 0.5px;
+}
+
+.terminated-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #ecfae8;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
 .brand-icon {
   font-size: 44px;
   filter: drop-shadow(0 0 10px var(--lcd-green-glow));
