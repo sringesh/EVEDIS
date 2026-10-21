@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 4040;
 const cliArg = (process.argv[2] || '').toLowerCase();
 
 // -------------------------------------------------------------
-// FAST CLI SHORTCUTS (open, clean, ed, td, pd, stop, status)
+// FAST CLI SHORTCUTS (help, status, clean, ed, td, pd, stop, kill)
 // -------------------------------------------------------------
 if (['help', '--help', '-h'].includes(cliArg)) {
   console.log('\n\x1b[1m\x1b[38;2;163;255;18mEVEDIS CLI Commands:\x1b[0m');
@@ -29,35 +29,6 @@ if (['help', '--help', '-h'].includes(cliArg)) {
   console.log('  \x1b[36mevedis status\x1b[0m     Check server and display status');
   console.log('  \x1b[36mevedis kill\x1b[0m       Stop server and virtual display completely\n');
   process.exit(0);
-}
-
-// "evedis open": Opens the host web console in Chrome (or boots server if stopped)
-if (['open', 'start', 'launch'].includes(cliArg)) {
-  const req = http.request({
-    hostname: '127.0.0.1',
-    port: PORT,
-    path: '/api/status',
-    method: 'GET',
-    timeout: 800
-  }, (res) => {
-    let data = '';
-    res.on('data', c => data += c);
-    res.on('end', () => {
-      console.log('\x1b[32m✔ EVEDIS server is active!\x1b[0m');
-      console.log('\x1b[36m🚀 Opening http://localhost:' + PORT + '/host in Google Chrome...\x1b[0m');
-      openBrowser(`http://localhost:${PORT}/host`);
-      process.exit(0);
-    });
-  });
-
-  req.on('error', () => {
-    console.log('\x1b[36m🚀 Starting EVEDIS Host Server and opening web console...\x1b[0m');
-    process.argv.push('--open');
-    bootServer();
-  });
-
-  req.end();
-  return;
 }
 
 // "evedis status": Query current server and display status
@@ -845,8 +816,32 @@ function bootServer() {
   });
 }
 
-// Check if fast create display was requested via CLI: ./evedis ed
-if (['ed', 'create', 'on', 'start-display'].includes(cliArg)) {
+// Check CLI subcommands
+if (['open', 'start', 'launch'].includes(cliArg)) {
+  const req = http.request({
+    hostname: '127.0.0.1',
+    port: PORT,
+    path: '/api/status',
+    method: 'GET',
+    timeout: 800
+  }, (res) => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      console.log('\x1b[32m✔ EVEDIS server is active!\x1b[0m');
+      console.log('\x1b[36m🚀 Opening http://localhost:' + PORT + '/host in Google Chrome...\x1b[0m');
+      openBrowser(`http://localhost:${PORT}/host`);
+      process.exit(0);
+    });
+  });
+
+  req.on('error', () => {
+    process.argv.push('--open');
+    bootServer();
+  });
+
+  req.end();
+} else if (['ed', 'create', 'on', 'start-display'].includes(cliArg)) {
   const postData = JSON.stringify({ width: 1920, height: 1200, fps: 60, position: 'right' });
   const req = http.request({
     hostname: '127.0.0.1',
