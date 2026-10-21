@@ -244,6 +244,9 @@ async function attemptPairing() {
     return;
   }
 
+  isTerminatedHandled = false;
+  if (sessionTerminatedBanner) sessionTerminatedBanner.style.display = 'none';
+
   if (pairingError) pairingError.textContent = '';
   if (btnConnect) {
     btnConnect.disabled = true;
@@ -298,7 +301,7 @@ async function attemptPairing() {
           return;
         }
         const sData = snap.data();
-        if (sData.hostTerminated || sData.hostOnline === false) {
+        if (sData.hostTerminated === true) {
           handleHostTerminated('The host computer terminated the external display session. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
           return;
         }
@@ -414,14 +417,6 @@ function setupWebRTC() {
       stream.addTrack(event.track);
     }
     
-    // Detect when video track is ended by host
-    if (event.track) {
-      event.track.onended = () => {
-        console.log('[WebRTC] Remote video track ended by host');
-        handleHostTerminated('The host computer ended the display stream. Scan the new QR code or enter the 6-digit PIN on the host to reconnect.');
-      };
-    }
-    
     const receivers = peerConnection.getReceivers();
     const videoReceiver = receivers.find(r => r.track && r.track.kind === 'video');
     if (videoReceiver && 'playoutDelayHint' in videoReceiver) {
@@ -470,10 +465,10 @@ function setupWebRTC() {
       if (hudStatus) hudStatus.textContent = 'Live (P2P)';
     } else if (state === 'connecting') {
       if (hudStatus) hudStatus.textContent = 'Connecting...';
+    } else if (state === 'disconnected') {
+      if (hudStatus) hudStatus.textContent = 'Reconnecting...';
     } else if (state === 'failed') {
-      if (wasEverConnected) {
-        handleHostTerminated('Host connection failed. Scan the new QR code or enter the 6-digit PIN to reconnect.');
-      }
+      if (hudStatus) hudStatus.textContent = 'Connection failed';
     }
   };
 }

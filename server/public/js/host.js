@@ -249,8 +249,16 @@ async function syncSessionToFirestore(pin) {
       pin,
       hostOrigin: window.location.origin,
       status: 'waiting',
+      hostTerminated: false,
+      hostOnline: true,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
+    if (localStream && peerConnection && peerConnection.localDescription) {
+      await sessionRef.update({
+        webrtc_offer: { type: 'offer', sdp: peerConnection.localDescription.sdp }
+      }).catch(() => {});
+    }
 
     if (firestoreUnsubscribe) {
       firestoreUnsubscribe();
@@ -272,7 +280,7 @@ async function syncSessionToFirestore(pin) {
         }
         updateTabletConnectedUI(true, 'Cloud WebRTC');
 
-        if (localStream && (!peerConnection || peerConnection.signalingState === 'closed')) {
+        if (localStream) {
           initiateWebRTC();
         }
       } else if (data.clientJoined === false || data.clientOnline === false) {
@@ -1012,7 +1020,10 @@ if (socket) {
 
   socket.on('pin_updated', (data) => {
     if (data.tabletURL) {
-      if (data.pin) currentPIN = data.pin;
+      if (data.pin) {
+        currentPIN = data.pin;
+        syncSessionToFirestore(currentPIN);
+      }
       document.querySelectorAll('.pin-digits-target').forEach(el => el.textContent = currentPIN);
       if (pinDisplay) pinDisplay.textContent = currentPIN;
       if (radarPinDisplay) radarPinDisplay.textContent = currentPIN;
