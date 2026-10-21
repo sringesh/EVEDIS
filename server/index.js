@@ -34,17 +34,47 @@ app.get('/host', (req, res) => res.sendFile(path.join(__dirname, 'public', 'host
 app.get('/client', (req, res) => res.sendFile(path.join(__dirname, 'public', 'client.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
-// Helper to get local IPv4 address on LAN
-function getLocalIP() {
+// Helper to get network interface details with Wi-Fi prioritization
+function getNetworkDetails() {
   const interfaces = os.networkInterfaces();
+  
+  // 1. Prioritize real Wi-Fi adapter (en0 on macOS, wlan0 / wlp on Linux, 'Wi-Fi' on Windows)
   for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+    const lower = name.toLowerCase();
+    if (lower.includes('wi-fi') || lower.includes('wlan') || lower === 'en0') {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return { ip: iface.address, iface: name, type: 'Wi-Fi Direct (5GHz/LAN)' };
+        }
       }
     }
   }
-  return '127.0.0.1';
+
+  // 2. Active physical LAN interfaces (skip docker, bridge, utun/vpn, etc.)
+  for (const name of Object.keys(interfaces)) {
+    const lower = name.toLowerCase();
+    if (lower.includes('docker') || lower.includes('veth') || lower.includes('utun') || lower.includes('bridge') || lower.includes('lo')) continue;
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return { ip: iface.address, iface: name, type: 'LAN' };
+      }
+    }
+  }
+
+  // 3. Fallback to any non-internal IPv4
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return { ip: iface.address, iface: name, type: 'LAN' };
+      }
+    }
+  }
+
+  return { ip: '127.0.0.1', iface: 'lo', type: 'Localhost' };
+}
+
+function getLocalIP() {
+  return getNetworkDetails().ip;
 }
 
 // Global runtime state
@@ -283,7 +313,8 @@ async function renderTerminalDashboard() {
   isRenderingDashboard = true;
 
   try {
-    const localIP = getLocalIP();
+    const net = getNetworkDetails();
+    const localIP = net.ip;
     const tabletURL = `http://${localIP}:${PORT}/client.html?pin=${currentPIN}`;
     const qrRaw = await qrcode.toString(tabletURL, { type: 'terminal', small: true });
     const qrLines = qrRaw.split('\n').filter(l => stripAnsi(l).length > 0);
@@ -293,6 +324,7 @@ async function renderTerminalDashboard() {
     const resText = isAttached && vDisplayInfo ? `${vDisplayInfo.width}x${vDisplayInfo.height} @ ${vDisplayInfo.fps}Hz` : '1920x1200 @ 60Hz (Standby)';
     const edgeText = currentPosition === 'left' ? C.amber + C.bold + 'LEFT OF MAC [L]' + C.reset : C.amber + C.bold + 'RIGHT OF MAC [R]' + C.reset;
     const clientCountText = clientSockets.size > 0 ? C.green + C.bold + `${clientSockets.size} Tablet(s) Active` + C.reset : C.gray + '0 Tablet(s) Paired' + C.reset;
+    const qualityText = `${currentQuality.resolution} @ ${currentQuality.fps}Hz (${currentQuality.bitrate}k)`;
 
     const leftBox = [
       C.cyan + '┌── LCD VIRTUAL DISPLAY ────────────┐' + C.reset,
@@ -301,7 +333,7 @@ async function renderTerminalDashboard() {
       makeLine(C.gray + 'EDGE POSITION' + C.reset, edgeText),
       makeLine(C.gray + 'DRIVER' + C.reset, C.white + 'CoreGraphics (Native)' + C.reset),
       makeLine(C.gray + 'CONNECTED' + C.reset, clientCountText),
-      makeLine(C.gray + 'PIPELINE' + C.reset, C.white + 'WebRTC H.264 6Mbps' + C.reset),
+      makeLine(C.gray + 'STREAM QUALITY' + C.reset, C.green + C.bold + qualityText + C.reset),
       C.cyan + '├── QUICK PAIRING ACCESS ───────────┤' + C.reset,
       makeLine(C.gray + 'PAIRING PIN' + C.reset, C.pinBg + '  ' + currentPIN.split('').join(' ') + '  ' + C.reset),
       makeLine(C.gray + 'HOST CONSOLE' + C.reset, C.white + `localhost:${PORT}/host` + C.reset),
@@ -311,7 +343,7 @@ async function renderTerminalDashboard() {
       makeLine(C.gray + '2. Browser Tap' + C.reset, C.white + 'Open Wi-Fi IP' + C.reset),
       makeLine(C.gray + '3. Touch Screen' + C.reset, C.white + 'Pinch/Drag/Stylus' + C.reset),
       C.cyan + '├── TELEMETRY ──────────────────────┤' + C.reset,
-      makeLine(C.gray + 'NETWORK LATENCY' + C.reset, C.green + '< 16ms' + C.reset),
+      makeLine(C.gray + 'NETWORK LINK' + C.reset, C.green + net.type + C.reset),
       C.cyan + '└───────────────────────────────────┘' + C.reset
     ];
 
@@ -416,18 +448,22 @@ process.on('SIGTERM', cleanupAndExit);
 // REST API ROUTES
 // -------------------------------------------------------------
 app.get('/api/status', async (req, res) => {
-  const localIP = getLocalIP();
+  const net = getNetworkDetails();
+  const localIP = net.ip;
   const tabletURL = `http://${localIP}:${PORT}/client.html?pin=${currentPIN}`;
   const qrDataURL = await qrcode.toDataURL(tabletURL, { margin: 1, width: 256 });
 
   res.json({
     localIP,
+    networkType: net.type,
+    interfaceName: net.iface,
     port: PORT,
     pin: currentPIN,
     tabletURL,
     qrCode: qrDataURL,
     vDisplay: vDisplayInfo,
     position: currentPosition,
+    quality: currentQuality,
     platform: process.platform
   });
 });

@@ -58,6 +58,14 @@ const btnCloseGuide = document.getElementById('btnCloseGuide');
 const btnGuideStartCapture = document.getElementById('btnGuideStartCapture');
 const btnCopyCommand = document.getElementById('btnCopyCommand');
 
+// Wi-Fi & Quality Profile Elements
+const activeProfileBadge = document.getElementById('activeProfileBadge');
+const presetButtons = document.querySelectorAll('.preset-btn');
+const selResolution = document.getElementById('selResolution');
+const selFps = document.getElementById('selFps');
+const wifiLinkVal = document.getElementById('wifiLinkVal');
+const wifiConditionBadge = document.getElementById('wifiConditionBadge');
+
 // WebRTC State
 let localStream = null;
 let peerConnection = null;
@@ -241,6 +249,12 @@ async function syncSessionToFirestore(pin) {
         console.log('[Firestore] Received WebRTC answer from tablet client');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.webrtc_answer));
       }
+
+      // Received real-time quality adaptation from tablet
+      if (data.quality && (data.quality.resolution !== currentQuality.resolution || data.quality.fps !== currentQuality.fps)) {
+        console.log('[Firestore] Tablet updated streaming quality:', data.quality);
+        applyStreamQuality(data.quality, false);
+      }
     });
 
     // Listen for ICE candidates from tablet
@@ -279,6 +293,10 @@ async function loadStatus() {
         if (data.localIP && data.localIP !== '127.0.0.1') {
           detectedLANIP = data.localIP;
           generateAndDisplayPairingInfo(currentPIN);
+          if (wifiLinkVal) {
+            const netType = data.networkType || 'Direct Wi-Fi';
+            wifiLinkVal.textContent = `${netType} (${data.localIP}:${data.port || 4040})`;
+          }
         }
         if (data.vDisplay && data.vDisplay.status === 'active') {
           updateVDisplayUI(true, data.vDisplay);
@@ -286,13 +304,168 @@ async function loadStatus() {
         if (data.position) {
           updateArrangementUI(data.position);
         }
+        if (data.quality) {
+          applyStreamQuality(data.quality, false);
+        }
         break;
       }
     } catch (e) {
       // Local daemon not reachable, cloud mode remains active
     }
   }
+
+  if (!detectedLANIP && wifiLinkVal) {
+    wifiLinkVal.textContent = 'Cloud WebRTC (P2P Relay)';
+  }
 }
+
+// -------------------------------------------------------------
+// Real-Time Stream Quality & Wi-Fi Profile Adaptation
+// -------------------------------------------------------------
+async function applyStreamQuality(quality, emitEvent = true) {
+  currentQuality = { ...currentQuality, ...quality };
+  console.log('[Quality] Applying real-time quality adaptation:', currentQuality);
+
+  // 1. Update UI Elements
+  if (activeProfileBadge) {
+    activeProfileBadge.textContent = `${currentQuality.resolution} @ ${currentQuality.fps} FPS`;
+  }
+
+  // Update preset buttons active state
+  presetButtons.forEach(btn => {
+    const isMatch = btn.dataset.res === currentQuality.resolution && 
+                    parseInt(btn.dataset.fps) === parseInt(currentQuality.fps);
+    btn.classList.toggle('active', isMatch);
+  });
+
+  // Update select dropdowns
+  if (selResolution && selResolution.value !== currentQuality.resolution) {
+    selResolution.value = currentQuality.resolution;
+  }
+  if (selFps && selFps.value !== currentQuality.fps.toString()) {
+    selFps.value = currentQuality.fps.toString();
+  }
+
+  // Update stats pill
+  if (statFps) statFps.textContent = currentQuality.fps;
+  if (statRes) {
+    statRes.textContent = currentQuality.resolution === '1080p' ? '1920x1200' : 
+                          currentQuality.resolution === '720p' ? '1280x800' : '854x480';
+  }
+
+  // Update Wi-Fi condition badge
+  if (wifiConditionBadge) {
+    const br = currentQuality.bitrate || 6000;
+    if (br >= 5000) {
+      wifiConditionBadge.textContent = `Optimal (${br} kbps)`;
+      wifiConditionBadge.className = 'wifi-badge wifi-good';
+    } else if (br >= 2500) {
+      wifiConditionBadge.textContent = `Balanced (${br} kbps)`;
+      wifiConditionBadge.className = 'wifi-badge wifi-good';
+    } else {
+      wifiConditionBadge.textContent = `Data Saver (${br} kbps)`;
+      wifiConditionBadge.className = 'wifi-badge wifi-warn';
+    }
+  }
+
+  // 2. Adjust WebRTC RTCRtpSender parameters in REAL TIME
+  if (peerConnection) {
+    const senders = peerConnection.getSenders();
+    const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+    if (videoSender) {
+      try {
+        const params = videoSender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+          params.encodings = [{}];
+        }
+
+        // Real-time bitrate adaptation (bps)
+        const bitrateKbps = currentQuality.bitrate || 
+          (currentQuality.resolution === '1080p' ? 6000 : currentQuality.resolution === '720p' ? 2500 : 1200);
+        params.encodings[0].maxBitrate = bitrateKbps * 1000;
+
+        // Real-time framerate adaptation
+        const targetFps = parseInt(currentQuality.fps) || 60;
+        params.encodings[0].maxFramerate = targetFps;
+
+        // Dynamic resolution downscaling on the fly
+        if (currentQuality.resolution === '1080p') {
+          params.encodings[0].scaleResolutionDownBy = 1.0;
+        } else if (currentQuality.resolution === '720p') {
+          params.encodings[0].scaleResolutionDownBy = 1.5;
+        } else if (currentQuality.resolution === '480p') {
+          params.encodings[0].scaleResolutionDownBy = 2.25;
+        }
+
+        await videoSender.setParameters(params);
+        console.log('[Quality] RTCRtpSender video parameters updated in real time:', params.encodings[0]);
+      } catch (err) {
+        console.warn('[Quality] Could not set RTCRtpSender parameters:', err);
+      }
+    }
+  }
+
+  // 3. Dynamically adjust localStream video track constraints in real time
+  if (localStream) {
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      const targetFps = parseInt(currentQuality.fps) || 60;
+      const constraints = {
+        frameRate: { ideal: targetFps, max: targetFps }
+      };
+      if (currentQuality.resolution === '1080p') {
+        constraints.width = { ideal: 1920 };
+        constraints.height = { ideal: 1200 };
+      } else if (currentQuality.resolution === '720p') {
+        constraints.width = { ideal: 1280 };
+        constraints.height = { ideal: 800 };
+      } else if (currentQuality.resolution === '480p') {
+        constraints.width = { ideal: 854 };
+        constraints.height = { ideal: 480 };
+      }
+      try {
+        await videoTrack.applyConstraints(constraints);
+      } catch (e) {
+        console.warn('[Quality] videoTrack.applyConstraints warning:', e);
+      }
+    }
+  }
+
+  // 4. Emit to tablet & server
+  if (emitEvent) {
+    if (socket && socket.connected) {
+      socket.emit('change_quality', currentQuality);
+    }
+    if (typeof firebase !== 'undefined' && firebase.firestore && window.__IS_FIREBASE_CONFIGURED__) {
+      const db = firebase.firestore();
+      db.collection('sessions').doc(currentPIN).update({
+        quality: currentQuality
+      }).catch(() => {});
+    }
+    showRetroToast(`⚡ Stream Quality: ${currentQuality.resolution} @ ${currentQuality.fps} FPS applied in real time!`);
+  }
+}
+
+// Attach preset buttons
+presetButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const res = btn.dataset.res;
+    const fps = parseInt(btn.dataset.fps);
+    const bitrate = parseInt(btn.dataset.bitrate);
+    applyStreamQuality({ resolution: res, fps, bitrate }, true);
+  });
+});
+
+// Attach custom selects
+function handleCustomQualitySelect() {
+  const res = selResolution ? selResolution.value : '1080p';
+  const fps = parseInt(selFps ? selFps.value : 60);
+  const baseBitrate = res === '1080p' ? 6000 : res === '720p' ? 2500 : 1200;
+  const bitrate = Math.round(baseBitrate * (fps / 60));
+  applyStreamQuality({ resolution: res, fps, bitrate }, true);
+}
+if (selResolution) selResolution.addEventListener('change', handleCustomQualitySelect);
+if (selFps) selFps.addEventListener('change', handleCustomQualitySelect);
 
 // Display Arrangement (Left vs Right)
 const btnArrangeLeft = document.getElementById('btnArrangeLeft');
@@ -602,6 +775,9 @@ async function initiateWebRTC() {
     peerConnection.addTrack(track, localStream);
   });
 
+  // Apply current quality profile parameters immediately to the new peer connection
+  applyStreamQuality(currentQuality, false);
+
   // ICE candidates
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
@@ -718,6 +894,16 @@ if (socket) {
         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {}
     }
+  });
+
+  socket.on('apply_quality', (quality) => {
+    console.log('[Socket] Tablet requested quality adaptation:', quality);
+    applyStreamQuality(quality, false);
+    showRetroToast(`📱 Tablet switched quality: ${quality.resolution} @ ${quality.fps} FPS`);
+  });
+
+  socket.on('quality_state', (quality) => {
+    applyStreamQuality(quality, false);
   });
 }
 

@@ -211,20 +211,33 @@
               <span class="quality-title">⚡ Wi-Fi &amp; Quality Profile</span>
               <span class="quality-badge" id="activeProfileBadge">1080p @ 60 FPS</span>
             </div>
+
+            <!-- Dynamic Real-Time Wi-Fi Diagnostics -->
+            <div class="wifi-telemetry-strip" id="wifiTelemetryStrip">
+              <div class="wifi-telemetry-item">
+                <span class="wifi-icon">📶</span>
+                <span class="wifi-label">Wi-Fi Link:</span>
+                <span class="wifi-val" id="wifiLinkVal">Detecting local network...</span>
+              </div>
+              <div class="wifi-telemetry-item">
+                <span class="wifi-label">Condition:</span>
+                <span class="wifi-badge wifi-good" id="wifiConditionBadge">Optimal (6000 kbps)</span>
+              </div>
+            </div>
             
             <div class="preset-buttons-row">
-              <button class="preset-btn active" data-res="1080p" data-fps="60" data-bitrate="6000">1080p 60fps</button>
-              <button class="preset-btn" data-res="720p" data-fps="30" data-bitrate="2500">720p 30fps</button>
-              <button class="preset-btn" data-res="480p" data-fps="30" data-bitrate="1200">480p 30fps</button>
+              <button class="preset-btn active" data-res="1080p" data-fps="60" data-bitrate="6000" title="Ultra Smooth & Crisp (Fast 5GHz Wi-Fi)">1080p 60fps</button>
+              <button class="preset-btn" data-res="720p" data-fps="30" data-bitrate="2500" title="Balanced & Low Jitter (Normal Wi-Fi)">720p 30fps</button>
+              <button class="preset-btn" data-res="480p" data-fps="30" data-bitrate="1200" title="Data Saver & Lowest Latency (Weak Wi-Fi)">480p 30fps</button>
             </div>
 
             <div class="custom-quality-row">
               <div class="quality-field">
                 <label>Resolution</label>
                 <select id="selResolution" class="quality-select">
-                  <option value="1080p" selected>1080p (FHD)</option>
-                  <option value="720p">720p (HD)</option>
-                  <option value="480p">480p (SD)</option>
+                  <option value="1080p" selected>1080p (FHD 1920x1200)</option>
+                  <option value="720p">720p (HD 1280x800)</option>
+                  <option value="480p">480p (SD 854x480)</option>
                 </select>
               </div>
               <div class="quality-field">

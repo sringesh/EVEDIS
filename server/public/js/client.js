@@ -146,6 +146,9 @@ async function attemptPairing() {
         if (sData.webrtc_offer && (!peerConnection || peerConnection.signalingState === 'stable' || peerConnection.signalingState === 'have-remote-offer')) {
           await handleCloudWebRTCOffer(sData.webrtc_offer);
         }
+        if (sData.quality) {
+          updateClientQualityUI(sData.quality);
+        }
       });
 
       // Listen for ICE candidates from host
@@ -318,10 +321,27 @@ if (socket) {
     }
   });
 
+  socket.on('quality_state', (quality) => {
+    console.log('[Socket] Received quality update from Host:', quality);
+    updateClientQualityUI(quality);
+  });
+
   socket.on('host_disconnected', () => {
     alert('Host disconnected.');
     location.reload();
   });
+}
+
+function updateClientQualityUI(quality) {
+  if (!quality) return;
+  tabQualityButtons.forEach(btn => {
+    const isMatch = btn.dataset.res === quality.resolution && 
+                    parseInt(btn.dataset.fps) === parseInt(quality.fps);
+    btn.classList.toggle('active', isMatch);
+  });
+  if (hudStatus) {
+    hudStatus.textContent = `${quality.resolution} ${quality.fps}fps`;
+  }
 }
 
 // 7. Display Scale & "Laptop Size Match" Readjustment Engine
@@ -501,6 +521,40 @@ if (btnCloseQualityDrawer) {
     qualityDrawer.classList.remove('open');
   });
 }
+
+// Tablet Quality Profile Buttons
+tabQualityButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const res = btn.dataset.res;
+    const fps = parseInt(btn.dataset.fps);
+    const bitrate = parseInt(btn.dataset.bitrate);
+
+    tabQualityButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const quality = { resolution: res, fps, bitrate };
+    console.log('[Client] Requested streaming quality change:', quality);
+
+    if (hudStatus) {
+      hudStatus.textContent = `${res} ${fps}fps`;
+    }
+
+    // 1. Send over Socket.io to Host
+    if (socket && socket.connected) {
+      socket.emit('change_quality', quality);
+    }
+
+    // 2. Sync to Firestore in Cloud mode
+    if (firestoreSessionRef) {
+      firestoreSessionRef.update({ quality }).catch(() => {});
+    }
+
+    triggerHUD();
+    setTimeout(() => {
+      qualityDrawer.classList.remove('open');
+    }, 300);
+  });
+});
 
 if (btnToggleFullscreen) {
   btnToggleFullscreen.addEventListener('click', () => {
