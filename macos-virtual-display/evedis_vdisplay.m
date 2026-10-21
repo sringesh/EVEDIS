@@ -1,6 +1,8 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <signal.h>
+#import <time.h>
+#import <stdlib.h>
 
 @interface CGVirtualDisplayDescriptor : NSObject
 @property (nonatomic, copy) NSString *name;
@@ -66,14 +68,52 @@ BOOL arrangeDisplay(CGDirectDisplayID secID, NSString *position) {
         return NO;
     }
 
+    // Explicitly anchor main display at (0, 0)
+    CGConfigureDisplayOrigin(configRef, mainID, 0, 0);
+
+    // Place secondary display at target offset
     err = CGConfigureDisplayOrigin(configRef, secID, targetX, targetY);
     if (err != kCGErrorSuccess) {
         CGCancelDisplayConfiguration(configRef);
         return NO;
     }
 
-    err = CGCompleteDisplayConfiguration(configRef, kCGConfigurePermanently);
+    // kCGConfigureForSession ensures configuration applies to this session without permanently
+    // recording sticky window-to-display mappings in WindowServer preferences
+    err = CGCompleteDisplayConfiguration(configRef, kCGConfigureForSession);
     return (err == kCGErrorSuccess);
+}
+
+// Ensure browser windows (e.g. Google Chrome host controller) remain on the main screen
+void ensureWindowsOnMainDisplay(CGRect mainBounds) {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        usleep(100000); // 100ms
+        NSString *script = [NSString stringWithFormat:
+            @"tell application \"System Events\"\n"
+            @"  if exists (process \"Google Chrome\") then\n"
+            @"    tell application \"Google Chrome\"\n"
+            @"      repeat with w in windows\n"
+            @"        try\n"
+            @"          set b to bounds of w\n"
+            @"          set x1 to item 1 of b\n"
+            @"          set y1 to item 2 of b\n"
+            @"          set x2 to item 3 of b\n"
+            @"          set y2 to item 4 of b\n"
+            @"          set wWidth to x2 - x1\n"
+            @"          set wHeight to y2 - y1\n"
+            @"          if x1 >= %.0f or x1 < 0 then\n"
+            @"            set newX1 to 50\n"
+            @"            set newY1 to 50\n"
+            @"            set bounds of w to {newX1, newY1, newX1 + wWidth, newY1 + wHeight}\n"
+            @"          end if\n"
+            @"        end try\n"
+            @"      end repeat\n"
+            @"    end tell\n"
+            @"  end if\n"
+            @"end tell", mainBounds.size.width];
+        NSAppleScript *as = [[NSAppleScript alloc] initWithSource:script];
+        [as executeAndReturnError:nil];
+    });
 }
 
 int main(int argc, const char * argv[]) {
@@ -111,8 +151,9 @@ int main(int argc, const char * argv[]) {
         desc.maxPixelsHigh = height;
         desc.sizeInMillimeters = CGSizeMake(216, 135);
         desc.vendorID = 0x4556; // 'EV'
-        desc.productID = 0x0001;
-        desc.serialNum = 1;
+        // Dynamic productID and serialNum prevent macOS WindowServer from recalling old window-to-display mappings
+        desc.productID = (unsigned int)(0x0001 + (arc4random() % 0xFFFE));
+        desc.serialNum = (unsigned int)time(NULL) ^ (arc4random() & 0xFFFF);
         desc.queue = dispatch_get_main_queue();
 
         gDisplay = [[NSClassFromString(@"CGVirtualDisplay") alloc] initWithDescriptor:desc];
@@ -137,6 +178,10 @@ int main(int argc, const char * argv[]) {
         // Position the display (left or right)
         arrangeDisplay(displayID, gPosition);
         CGRect bounds = CGDisplayBounds(displayID);
+        CGRect mainBounds = CGDisplayBounds(CGMainDisplayID());
+
+        // Ensure Chrome stays on Screen 1
+        ensureWindowsOnMainDisplay(mainBounds);
 
         // Print initial status JSON
         printf("{\"status\": \"active\", \"displayID\": %u, \"width\": %u, \"height\": %u, \"boundsWidth\": %.0f, \"boundsHeight\": %.0f, \"originX\": %.0f, \"originY\": %.0f, \"position\": \"%s\", \"fps\": %.1f, \"name\": \"%s\"}\n",

@@ -128,17 +128,57 @@ function makeLine(label, val) {
 
 function ensureBinaryExists() {
   const binaryPath = path.join(__dirname, '..', 'macos-virtual-display', 'evedis-vdisplay');
-  if (!fs.existsSync(binaryPath) && process.platform === 'darwin') {
-    const srcPath = path.join(__dirname, '..', 'macos-virtual-display', 'evedis_vdisplay.m');
-    const { execSync } = require('child_process');
-    try {
-      execSync(`clang -framework CoreGraphics -framework Foundation "${srcPath}" -o "${binaryPath}"`);
-      fs.chmodSync(binaryPath, 0o755);
-    } catch (e) {
-      console.error('[Build Error] Could not compile macOS virtual display driver:', e.message);
+  const srcPath = path.join(__dirname, '..', 'macos-virtual-display', 'evedis_vdisplay.m');
+  if (process.platform === 'darwin') {
+    let needRebuild = !fs.existsSync(binaryPath);
+    if (!needRebuild && fs.existsSync(srcPath)) {
+      const srcStat = fs.statSync(srcPath);
+      const binStat = fs.statSync(binaryPath);
+      if (srcStat.mtimeMs > binStat.mtimeMs) {
+        needRebuild = true;
+      }
+    }
+    if (needRebuild && fs.existsSync(srcPath)) {
+      const { execSync } = require('child_process');
+      try {
+        execSync(`clang -framework CoreGraphics -framework Foundation "${srcPath}" -o "${binaryPath}"`);
+        fs.chmodSync(binaryPath, 0o755);
+      } catch (e) {
+        console.error('[Build Error] Could not compile macOS virtual display driver:', e.message);
+      }
     }
   }
   return binaryPath;
+}
+
+// Safely pin Google Chrome host page to Screen 1 so macOS never moves it to the virtual screen
+function pinChromeToMainScreen() {
+  if (process.platform !== 'darwin') return;
+  const script = `
+tell application "System Events"
+  if exists (process "Google Chrome") then
+    tell application "Google Chrome"
+      repeat with w in windows
+        try
+          set b to bounds of w
+          set x1 to item 1 of b
+          set y1 to item 2 of b
+          set x2 to item 3 of b
+          set y2 to item 4 of b
+          set wWidth to x2 - x1
+          set wHeight to y2 - y1
+          if x1 < 0 or x1 >= 1700 then
+            set newX1 to 60
+            set newY1 to 60
+            set bounds of w to {newX1, newY1, newX1 + wWidth, newY1 + wHeight}
+          end if
+        end try
+      end repeat
+    end tell
+  end if
+end tell
+`;
+  exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, () => {});
 }
 
 // Helper to open browser URL across platforms
@@ -188,6 +228,9 @@ function startVirtualDisplay(options = {}) {
           const parsed = JSON.parse(line);
           if (parsed.status === 'active') {
             vDisplayInfo = parsed;
+            pinChromeToMainScreen();
+            setTimeout(pinChromeToMainScreen, 150);
+            setTimeout(pinChromeToMainScreen, 400);
             io.emit('vdisplay_status', { active: true, info: vDisplayInfo, position: currentPosition });
             if (!resolved) {
               resolved = true;
