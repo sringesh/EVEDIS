@@ -2,8 +2,8 @@
 > **Open-Source Wireless Extended Secondary Display System for Mac, PC & Android Tablets**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform: macOS & Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-blue.svg)](https://github.com/SR1GESH/evedis)
-[![Protocol: WebRTC 60 FPS](https://img.shields.io/badge/Protocol-WebRTC%2060%20FPS-brightgreen.svg)](https://github.com/SR1GESH/evedis)
+[![Platform: macOS & Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-blue.svg)](https://github.com/sringesh/EVEDIS)
+[![Protocol: WebRTC 60 FPS](https://img.shields.io/badge/Protocol-WebRTC%2060%20FPS-brightgreen.svg)](https://github.com/sringesh/EVEDIS)
 [![Auth: Firebase Google SSO](https://img.shields.io/badge/Auth-Firebase%20SSO-orange.svg)](https://evedis.web.app)
 
 **EVEDIS** transforms any Android tablet (or any web device) into an ultra-low latency, hardware-accelerated **wireless secondary monitor** for your laptop or desktop.
@@ -19,12 +19,12 @@ Running EVEDIS locally gives you **full native OS hardware display privileges** 
 ### 🍎 macOS (1-Line Terminal Install)
 Open Terminal and run:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SR1GESH/evedis/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sringesh/EVEDIS/main/install.sh | bash
 ```
 
 **Or Clone & Run Manually:**
 ```bash
-git clone https://github.com/SR1GESH/evedis.git
+git clone https://github.com/sringesh/EVEDIS.git
 cd evedis
 ./start.sh
 ```
@@ -36,7 +36,7 @@ cd evedis
 1. Ensure [Node.js](https://nodejs.org) is installed.
 2. Open Command Prompt or PowerShell:
 ```cmd
-git clone https://github.com/SR1GESH/evedis.git
+git clone https://github.com/sringesh/EVEDIS.git
 cd evedis
 start.bat
 ```

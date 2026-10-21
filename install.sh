@@ -29,7 +29,7 @@ if [ -d "$TARGET_DIR" ]; then
   git pull origin main || true
 else
   echo "📥 Cloning EVEDIS to $TARGET_DIR..."
-  git clone https://github.com/SR1GESH/evedis.git "$TARGET_DIR"
+  git clone https://github.com/sringesh/EVEDIS.git "$TARGET_DIR"
   cd "$TARGET_DIR"
 fi
 
